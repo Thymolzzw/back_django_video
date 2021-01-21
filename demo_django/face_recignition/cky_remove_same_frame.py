@@ -89,7 +89,7 @@ def distance(image1, image2):
 def main(video_file_path, output_path):
     fourcc = cv2.VideoWriter_fourcc(*'MP42')
     output_movie = cv2.VideoWriter('testoutput2.mp4', fourcc, 29.97, (1280, 720))
-    # classifier = train("./datanew/train", model_save_path="model/trained_knn_model.clf", n_neighbors=2)
+    # classifier = train("./datanew/train",  model_save_p    ath="model/trained_knn_model.clf", n_neighbors=2)
     capture = cv2.VideoCapture(video_file_path)
     frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = capture.get(cv2.CAP_PROP_FPS)

@@ -31,5 +31,12 @@ urlpatterns = [
     path('doLogin', views.doLogin),
     path('doSignUp', views.doSignUp),
     path('myTest', views.myTest),
-    path('streamVideo', views.streamVideo)
+    path('streamVideo', views.streamVideo),
+    path('getSubTitle', views.getSubTitle),
+    path('getVideoAdditionData', views.getVideoAdditionData),
+    path('getVideoEquipment', views.getVideoEquipment),
+    path('getVideoPPT', views.getVideoPPT),
+    path('getFace', views.getFace),
+    path('getText', views.getText),
+
 ]

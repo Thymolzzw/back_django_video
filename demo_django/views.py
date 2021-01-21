@@ -19,15 +19,12 @@ import hashlib
 from demo_django.asr.pyTranscriber.asr_api import asr_subtitle
 from demo_django.utils import getBaseUrl, md5Encode
 
-
 import re
 from wsgiref.util import FileWrapper
 from django.http import StreamingHttpResponse
 
-
 # zzw
 from demo_django.wiki.wiki import wiki_api
-
 
 # 视频流
 def file_iterator(file_name, chunk_size=8192, offset=0, length=None):
@@ -83,10 +80,25 @@ def streamVideo(request):
 
 def getAllVideos(request):
     video_lists = Videos.objects.all()
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
     for video in video_lists:
-        video.rel_path = getBaseUrl() + video.rel_path
-        if video.snapshoot_img != None:
+        # 没有缩略图会自动生成
+        if video.snapshoot_img != None and video.snapshoot_img != "":
             video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+        else:
+            # 抽帧作为缩略图
+            image_path = os.path.join(curPath, 'statics', 'resource', 'images', video.name.split(".")[0] + ".png")
+            image_path_db = 'statics/' + 'resource/' + 'images/' + video.name.split(".")[0] + ".png"
+            video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', video.name))
+            extract_image(video_path, image_path=image_path)
+            video.snapshoot_img = image_path_db
+            video.save()
+            video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+
+        video.rel_path = getBaseUrl() + video.rel_path
+
         if video.text_location != None:
             video.text_location = getBaseUrl() + video.text_location
         if video.subtitle != None:
@@ -103,13 +115,58 @@ def getAllVideos(request):
         "data": json.loads(videos)
     }), content_type="application/json")
 
-def getOneVideos(request):
+def getSubTitle(request):
     videoId = request.GET.get("videoId")
     print(videoId)
     video = Videos.objects.filter(id=videoId).first()
 
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    # 字幕
+    subTitle = []
+    if video.subtitle != None and video.subtitle != "":
+        print("subtitle", os.path.join(curPath, video.subtitle))
+        with open(os.path.join(curPath, video.subtitle), 'r') as f:
+            line = f.readline()
+            while line:
+                # print("line", line)
+                item = {}
+                if "-->" in line:
+                    # print(line)
+                    item["time"] = line
+                    line = f.readline()
+                    item["content"] = line
+                    line = f.readline()
+                if item:
+                    subTitle.append(item)
+                line = f.readline()
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["subTitle"] = subTitle
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getVideoAdditionData(request):
+
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+
+
     # 附加信息
     addition_data = {}
+    video_time = get_video_times(os.path.join(curPath, video.rel_path))
+    addition_data["video_time"] = video_time
+
     if video.create_user != None:
         user = Users.objects.filter(id=video.create_user).first()
         if user:
@@ -135,49 +192,22 @@ def getOneVideos(request):
         else:
             addition_data["country_name"] = None
 
-    # 字幕
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["addition_data"] = addition_data
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getVideoEquipment(request):
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
     curPath = os.path.abspath(os.path.dirname(__file__))
     split_reg = curPath.split(os.sep)[-1]
     curPath = curPath.split(split_reg)[0] + split_reg
-    subTitle = []
-    if video.subtitle != None and video.subtitle != "":
-        with open(os.path.join(curPath, video.subtitle), 'r') as f:
-            line = f.readline()
-            while line:
-                item = {}
-                if "-->" in line:
-                    # print(line)
-                    item["time"] = line
-                    line = f.readline()
-                    line = f.readline()
-                    item["content"] = line
-                    line = f.readline()
-                if item:
-                    subTitle.append(item)
-                line = f.readline()
-
-
-    video_time = get_video_times(os.path.join(curPath, video.rel_path))
-
-    video.rel_path = getBaseUrl() + video.rel_path
-    if video.snapshoot_img != None and video.snapshoot_img != "":
-        video.snapshoot_img = getBaseUrl() + video.snapshoot_img
-    if video.subtitle != None and video.subtitle != "":
-        video.subtitle = getBaseUrl() + video.subtitle
-    if video.asr_path != None and video.asr_path != "":
-        video.asr_path = getBaseUrl() + video.asr_path
-    if video.ppt_pdf_path != None and video.ppt_pdf_path != "":
-        video.ppt_pdf_path = getBaseUrl() + video.ppt_pdf_path
-
-    ppt_json = None
-    if video.ppt_json_path != None and video.ppt_json_path != "":
-        with open(os.path.join(curPath, video.ppt_json_path), 'r') as load_f:
-            load_dict = json.load(load_f)
-            # print(load_dict)
-            for item in load_dict:
-                # print(item)
-                load_dict[item] = getBaseUrl() + "statics/resource/ppt_images/" + load_dict[item]
-            ppt_json = load_dict
 
     equipment_json_data = None
     if video.equipment_json_path != None and video.equipment_json_path != "":
@@ -190,13 +220,53 @@ def getOneVideos(request):
                 item["filename"] = getBaseUrl() + "statics/resource/object_images/" + item["filename"]
             equipment_json_data = load_dict
 
-    videos = serializers.serialize("json", [video])
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["equipment_json_data"] = equipment_json_data
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
 
 
-    #人脸识别
+def getVideoPPT(request):
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    ppt_json = None
+    if video.ppt_json_path != None and video.ppt_json_path != "":
+        with open(os.path.join(curPath, video.ppt_json_path), 'r') as load_f:
+            load_dict = json.load(load_f)
+            # print(load_dict)
+            for item in load_dict:
+                # print(item)
+                load_dict[item] = getBaseUrl() + "statics/resource/ppt_images/" + load_dict[item]
+            ppt_json = load_dict
+
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["ppt_json"] = ppt_json
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getFace(request):
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    # 人脸识别
     face_data = None
     if video.face_npy_path != None and video.face_npy_path != "":
-        loadData = np.load(os.path.join(curPath, 'statics', 'resource', 'face_npy', 'res_list.npy')
+        loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
         face_data = []
         for item in loadData:
@@ -233,6 +303,21 @@ def getOneVideos(request):
                 pass
 
             face_data.append(item_item)
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["face_data"] = face_data
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getText(request):
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
 
     # 文本识别
     text_data = None
@@ -241,21 +326,43 @@ def getOneVideos(request):
             text_data = json.load(load_f)
         print(text_data)
 
+    resp = {}
+    resp["code"] = 0
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["text_data"] = text_data
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+
+def getOneVideos(request):
+
+    videoId = request.GET.get("videoId")
+    print(videoId)
+    video = Videos.objects.filter(id=videoId).first()
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+
+    video.rel_path = getBaseUrl() + video.rel_path
+
+    if video.subtitle != None and video.subtitle != "":
+        video.subtitle = getBaseUrl() + video.subtitle
+    if video.asr_path != None and video.asr_path != "":
+        video.asr_path = getBaseUrl() + video.asr_path
+    if video.ppt_pdf_path != None and video.ppt_pdf_path != "":
+        video.ppt_pdf_path = getBaseUrl() + video.ppt_pdf_path
+
+    videos = serializers.serialize("json", [video])
 
     resp = {}
     resp["code"] = 0
     resp["msg"] = ""
     resp["status"] = 1
     resp["data"] = json.loads(videos)
-    resp["subTitle"] = subTitle
-    resp["video_time"] = video_time
-    resp["equipment_json_data"] = equipment_json_data
-    resp["ppt_json"] = ppt_json
-    resp["face_data"] = face_data
-    resp["text_data"] = text_data
-    resp["addition_data"] = addition_data
     return HttpResponse(JsonResponse(resp), content_type="application/json")
-
 
 
 def get_video_times(video_path):
