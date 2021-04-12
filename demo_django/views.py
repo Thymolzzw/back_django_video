@@ -665,6 +665,71 @@ def getVideoPPT(request):
     resp["ppt_json"] = ppt_json
     return HttpResponse(JsonResponse(resp), content_type="application/json")
 
+def updateFaceItem(request):
+    videoId = request.POST.get("videoId")
+    update_people_index = request.POST.get("update_people_index")
+    update_time_index = request.POST.get("update_time_index")
+    update_time_people_name = request.POST.get("update_time_people_name")
+    video = Videos.objects.filter(id=videoId).first()
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+    if video.face_npy_path != None and video.face_npy_path != "" \
+            and os.path.exists(os.path.join(curPath, video.face_npy_path)):
+        loadData = np.load(os.path.join(curPath, video.face_npy_path)
+                           , allow_pickle=True)
+        print(loadData)
+        find_people_index = -1
+        for i in range(len(loadData)):
+            if loadData[i][0] == update_time_people_name:
+                find_people_index = i
+                break
+        if find_people_index == -1:
+            # 文件中不存在该人名
+            pass
+            new_item = []
+            new_item.append(update_time_people_name)
+            new_item_item = []
+            new_item_item.append(loadData[int(update_people_index)][1][int(update_time_index)])
+            new_item.append(new_item_item)
+            new_item_item_item = []
+            new_item_item_item.append(loadData[int(update_people_index)][2][int(update_time_index)])
+            new_item.append(new_item_item_item)
+            np.append(loadData, new_item)
+        else:
+            # 存在该人名
+            # 插入
+            insert_index = 0
+            for i in range(len(loadData[find_people_index][1])):
+                if loadData[find_people_index][1][i] >= loadData[int(update_people_index)][1][int(update_time_index)]:
+                    insert_index = i
+                    break
+            if loadData[find_people_index][1][insert_index] != loadData[int(update_people_index)][1][int(update_time_index)]:
+                # 插入
+                loadData[find_people_index][1].insert(insert_index,
+                                                      loadData[int(update_people_index)][1][int(update_time_index)])
+                loadData[find_people_index][2].insert(insert_index,
+                                                      loadData[int(update_people_index)][2][int(update_time_index)])
+
+        # 删除
+        if loadData[int(update_people_index)][1] == 1:
+            # 长度为1，删除整体
+            del loadData[int(update_people_index)]
+            pass
+        else:
+            # 长度大于1,，删除对应对象
+            del loadData[int(update_people_index)][1][int(update_time_index)]
+            del loadData[int(update_people_index)][2][int(update_time_index)]
+            pass
+        np.save(os.path.join(curPath, video.face_npy_path), loadData)
+
+    pass
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
 def getFace(request):
     videoId = request.GET.get("videoId")
     # print(videoId)

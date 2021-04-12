@@ -7,7 +7,7 @@ def asr_subtitle(file, output):
     print('done')
 
 if __name__ == '__main__':
-    file = 'D:\download\\video\\test.mp4'
-    output = 'D:\download\\video\\'
+    file = '/home/wh/zzw/demo_django/statics/resource/videos/zzw.mp4'
+    output = '/home/wh/下载/'
     asr_subtitle(file, output)
 
