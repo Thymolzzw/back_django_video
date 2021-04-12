@@ -678,7 +678,7 @@ def updateFaceItem(request):
             and os.path.exists(os.path.join(curPath, video.face_npy_path)):
         loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
-        print(loadData)
+        # print(loadData)
         find_people_index = -1
         for i in range(len(loadData)):
             if loadData[i][0] == update_time_people_name:
@@ -746,7 +746,7 @@ def getFace(request):
         loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
 
-        print(loadData)
+        # print(loadData)
         face_data = []
         for item in loadData:
             # print(item)
