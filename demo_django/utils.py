@@ -2,8 +2,8 @@ import hashlib
 
 
 def getBaseUrl():
-    # return "http://172.26.124.167:8000/"
-    return "http://videos.natapp1.cc/"
+    return "http://127.0.0.1:9000/"
+    # return "http://cuiky.natapp1.cc/"
 
 def md5Encode(str):
     m = hashlib.md5()
@@ -11,3 +11,6 @@ def md5Encode(str):
     m.update(b)
     str_md5 = m.hexdigest()
     return str_md5
+
+if __name__ == '__main__':
+    print(md5Encode('aaaaaa'))

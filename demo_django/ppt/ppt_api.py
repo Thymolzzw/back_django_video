@@ -15,12 +15,18 @@ def cur_path():
     curPath = curPath.split("demo_django")[0]+"demo_django"
     return curPath
 
-def extract_image(path, num):  # 抗裁剪解水印时调用，将原始视频抽帧
-    file_name = cur_path() + "/statics/resource/ppt_images/frame_" + str(uuid.uuid1()) + "_" + str(int(time.time())) + ".png"
+def extract_image(path, num):  # 将原始视频抽帧
+    name = path.split('/')[-1].split('.')[0]
+    file_name = cur_path() + "/statics/resource/ppt_images/" + name + "_" + str(uuid.uuid1()) + "_" + str(int(time.time())) + ".png"
     cap = cv2.VideoCapture(path)  # 读入文件
     cap.set(cv2.CAP_PROP_POS_FRAMES, num)  # 从num帧开始读视频
     success, frame = cap.read()
-    cv2.imwrite(file_name, frame)
+    print("frame", frame)
+    try:
+        cv2.imwrite(file_name, frame)
+    except:
+        file_name = None
+        pass
     cap.release()
     return file_name
 
@@ -141,8 +147,11 @@ def distance(image1, image2):
 
 def face_detect(filename):
     # cv2级联分类器CascadeClassifier,xml文件为训练数据
-    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-    eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = 'demo_django'
+    curPath = curPath.split(split_reg)[0] + split_reg
+    face_cascade = cv2.CascadeClassifier(curPath + '/demo_django/ppt/haarcascade_frontalface_default.xml')
+    eye_cascade = cv2.CascadeClassifier(curPath + '/demo_django/ppt/haarcascade_eye.xml')
     # 读取图片
     img = cv2.imread(filename)
     # 转灰度图
@@ -184,10 +193,12 @@ def main(video_file_path):
     while int(frame + 0.5) < frame_count:
         # 先抽出来
         now_frame_path = extract_image(video_file_path, int(frame + 0.5))
-
+        if now_frame_path == None:
+            frame += fps
+            continue
         # 再比对特征
         if len(frames) < 1:
-            print(frame)
+            # print(frame)
             frame += fps
             frames.append(now_frame_path)
             continue
@@ -215,16 +226,17 @@ def main(video_file_path):
     for img in frames:
         image = Image.open(img)
         img_list.append(image)
-        print(img)
+        # print(img)
         list_json[str(i)] = img.split("/")[-1]
         i += 1
-    print(img_list)
-    print(list_json)
+    # print(img_list)
+    # print(list_json)
 
     json_file_path = os.path.join("statics", "resource", "ppt_json", str(uuid.uuid1())+"_"+str(int(time.time()))+".json")
     with open(os.path.join(cur_path(), json_file_path), "w") as f:
         json.dump(list_json, f)
 
+    pdf_path = None
     if len(img_list) > 0:
         width = 0
         height = 0
@@ -243,24 +255,25 @@ def main(video_file_path):
             # 图片水平居中
             result.paste(img, box=(round(width / 2 - w / 2), height))
             height += h
-        result.show()
+        # result.show()
 
         # 保存图片
         pdf_path = os.path.join("statics", "resource", "ppt_pdf",
                                       str(uuid.uuid1()) + "_" + str(int(time.time())) + ".pdf")
         result.save(os.path.join(cur_path(), pdf_path))
+    return json_file_path, pdf_path
 
 
 
 def ppt_api(file):
-    main(file)
+    return main(file)
 
 
 if __name__ == '__main__':
-    file = r'D:\TensorFlow_workplace_new\junkeyuan\shot_boundary_detection\test22.mp4'
     # main(file)
     # pass
     # cur_path()
+    file = "D:\TensorFlow_workplace_new\demo_django\statics\\resource\\videos\\lesson1.mp4"
     ppt_api(file=file)
     # CatchUsbVideo()
     # dis = distance("D:\TensorFlow_workplace_new\demo_django\statics\\resource\ppt_images\\frame_aae2cd74-59af-11eb-b1c8-b48655f33ff9_1610989658.png"

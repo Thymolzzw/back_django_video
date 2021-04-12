@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -25,7 +27,7 @@ SECRET_KEY = '=c@s5zrji0dd&0(nto%o)$jfk$1#^83m&id4k6m*vcaqec5=d$'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "172.26.124.167", "videos.natapp1.cc", "*"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "172.26.124.167", "192.168.1.107", "*"]
 
 
 # Application definition
@@ -39,9 +41,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'MyModel',
     'corsheaders',
+    'test',
+
 ]
 
+
 MIDDLEWARE = [
+    'demo_django.solveCD.MyCorsMiddle',
+    
+    # 'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -49,7 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'demo_django.urls'
@@ -135,14 +143,15 @@ STATICFILES_DIRS = [
 
 
 
+
 # 添加跨域增加忽略
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
 # 添加白名单
 CORS_ORIGIN_WHITELIST = (
     'http://videos.natapp1.cc',
-    'http://127.0.0.1:8080',
-    'http://localhost:8080',
+    'http://127.0.0.1:8082',
+    'http://localhost:8082',
 )
 # 添加跨域请求允许的请求方式
 CORS_ALLOW_METHODS = (
@@ -158,6 +167,7 @@ CORS_ALLOW_METHODS = (
 CORS_ALLOW_HEADERS = (
     'XMLHttpRequest',
     'X_FILENAME',
+    'accept',
     'accept-encoding',
     'authorization',
     'content-type',
@@ -167,5 +177,5 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
     'Pragma',
-)
 
+)

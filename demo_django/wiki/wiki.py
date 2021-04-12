@@ -8,9 +8,7 @@ def query(content):
     # 请求地址
     url = 'https://en.wikipedia.org/wiki/' + urllib.parse.quote(content)
 
-
-    print("url", url)
-
+    # print("url", url)
 
     # 请求头部
     headers = {
@@ -67,10 +65,13 @@ def query(content):
 def wiki_api(name):
     name.strip()
     if ' ' in name:
-        print("ok")
+        # print("ok")
         name = name.replace(' ', '_')
-    print(name)
-    result = query(name)
+    # print(name)
+    try:
+        result = query(name)
+    except:
+        result = None
     return result
 
 
