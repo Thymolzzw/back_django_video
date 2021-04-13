@@ -54,6 +54,7 @@ urlpatterns = [
     path('getVideoVoicePrint', views.getVideoVoicePrint),
     path('updateEquipment', back_views.updateEquipment),
     path('updateFaceItem', views.updateFaceItem),
+    path('deleteFaceItem', views.deleteFaceItem),
     path('getCountryList', views.getCountryList),
     path('getResourceList', views.getResourceList),
     path('deleteResource', views.deleteResource),
