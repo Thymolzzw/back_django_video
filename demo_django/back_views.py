@@ -515,34 +515,40 @@ def searchVideos(request):
 
     video_lists = Videos.objects.filter(is_delete=0)
     video_lists = list(video_lists)
-    print("type(video_lists_list)", video_lists[0].name)
+    print("type(video_lists_list)", len(video_lists))
 
     if '0' in searchType:
-        # video type
-        video_i = 0
-        while video_i < len(video_lists):
-            video_type = str(video_lists[video_i].name.split('.')[-1]).upper()
-            if video_type == None or video_type == "" or searchText.split('.')[-1] != video_type:
-                video_lists.remove(video_lists[video_i])
-                video_i -= 1
-            video_i += 1
+        # latest upload
+        # video_i = 0
+        # while video_i < len(video_lists):
+        #     video_type = str(video_lists[video_i].name.split('.')[-1]).upper()
+        #     if video_type == None or video_type == "" or searchText.split('.')[-1] != video_type:
+        #         video_lists.remove(video_lists[video_i])
+        #         video_i -= 1
+        #     video_i += 1
+
+        video_lists = Videos.objects.filter(is_delete=0).order_by("-create_time")
+        video_lists = list(video_lists)
         pass
     if '1' in searchType:
         # people face
         video_i = 0
         while video_i < len(video_lists):
-            if video_lists[video_i].face_npy_path != None and video_lists[video_i].face_npy_path != "":
+            if video_lists[video_i].face_npy_path != None and video_lists[video_i].face_npy_path != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].face_npy_path)):
                 video_face_path = curPath + '/' + str(video_lists[video_i].face_npy_path)
                 text_data = np.load(video_face_path, allow_pickle=True)
                 text_data = str(text_data).upper()
-                print("text_data", text_data)
+                # print("text_data", text_data)
                 if searchText not in text_data:
+                    # print("shanchu")
                     video_lists.remove(video_lists[video_i])
                     video_i -= 1
             else:
                 video_lists.remove(video_lists[video_i])
                 video_i -= 1
             video_i += 1
+        # print(len(video_lists))
         pass
     if '2' in searchType:
         # object
@@ -552,8 +558,9 @@ def searchVideos(request):
         name_dict['水面舰艇'] = 'military ship'
         name_dict['装甲车'] = 'armored car'
         name_dict['战斗机'] = 'fighter'
-
+        searchText1 = searchText
         try:
+
             searchText = name_dict[searchText]
         except:
             pass
@@ -563,7 +570,8 @@ def searchVideos(request):
             # print("searchText", searchText)
             video_i = 0
             while video_i < len(video_lists):
-                if video_lists[video_i].equipment_json_path != None and video_lists[video_i].equipment_json_path != "":
+                if video_lists[video_i].equipment_json_path != None and video_lists[video_i].equipment_json_path != ""\
+                        and os.path.exists(os.path.join(curPath, video_lists[video_i].equipment_json_path)):
                     video_equipment_path = curPath + '/' + str(video_lists[video_i].equipment_json_path)
                     text_data = None
                     with open(video_equipment_path, 'r') as f:
@@ -571,7 +579,7 @@ def searchVideos(request):
                     if text_data != None:
                         text_data = str(text_data).upper()
                         # print("text_data", text_data)
-                        if searchText not in text_data:
+                        if searchText not in text_data and searchText1 not in text_data:
                             video_lists.remove(video_lists[video_i])
                             video_i -= 1
                     else:
@@ -655,7 +663,7 @@ def searchVideos(request):
             if video_lists[video_i].translate_subtitle != None and video_lists[video_i].translate_subtitle != "":
                 video_subtitle_path = curPath + '/' + str(video_lists[video_i].translate_subtitle)
                 text_data = None
-                with open(video_subtitle_path, 'r') as f:
+                with open(video_subtitle_path, 'r', encoding="utf-8") as f:
                     text_data = f.readlines()
                 if text_data != None:
                     text_data = str(text_data).upper()
@@ -675,8 +683,8 @@ def searchVideos(request):
         # country
         video_i = 0
         while video_i < len(video_lists):
-            print("len(video_lists)", len(video_lists))
-            print("video_i", video_i)
+            # print("len(video_lists)", len(video_lists))
+            # print("video_i", video_i)
             video_country = None
             if video_lists[video_i].country_id != None:
                 country = Country.objects.filter(id=video_lists[video_i].country_id).first()

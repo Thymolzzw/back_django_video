@@ -803,6 +803,7 @@ def getFace(request):
     face_data = None
     if video.face_npy_path != None and video.face_npy_path != ""\
             and os.path.exists(os.path.join(curPath, video.face_npy_path)):
+        print(video.face_npy_path)
         loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
 
