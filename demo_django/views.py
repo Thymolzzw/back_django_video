@@ -1,6 +1,7 @@
 import json
 import mimetypes
 import os
+import random
 import sys
 import time
 import uuid
@@ -1265,3 +1266,67 @@ def getPeopleList(request):
     resp["data"] = resources
     return HttpResponse(JsonResponse(resp), content_type="application/json")
 
+
+def getPeopleRelation(request):
+
+    innerHTML_head = '<div class="c-my-node" style="background-image: url('
+    innerHTML_mid = ');border:#ff875e solid 3px;"><div class="c-node-name" style="color:#ff875e">'
+    innerHTML_tail = '</div></div>'
+
+    video = Videos.objects.filter(id='136').first()
+    relation = {
+        "rootId": video.title,
+        "nodes": [
+            {"id": video.title, "text": "video.title", "color": '#ec6941', "borderColor": 'yellow',
+            'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid + video.title + innerHTML_tail
+            },
+        ],
+        "links": [{"from": 'a', "to": 'b', "text": '关系5', "color": '#67C23A'}]
+    }
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = 'demo_django'
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    video_people = []
+    if video.face_npy_path != None and video.face_npy_path != "" \
+            and os.path.exists(os.path.join(curPath, video.face_npy_path)):
+        loadData = np.load(os.path.join(curPath, video.face_npy_path)
+                           , allow_pickle=True)
+        print(loadData)
+        for item in loadData:
+            new_item = {}
+            new_item['people_name'] = item[0]
+            peo = People.objects.filter(name = item[0]).first()
+            new_item['people_id'] = peo.id
+            if peo.img == None or peo == "":
+                new_item['people_img'] = 'statics/resource/images/head_default.jpg'
+            else:
+                new_item['people_img'] = peo.img
+            video_people.append(new_item)
+        print(video_people)
+    for peo in video_people:
+        node_item = {}
+        node_item["id"] = peo["people_id"]
+        node_item["text"] = peo["people_name"]
+        node_item["borderColor"] = getRandomColor()
+        node_item["color"] = getRandomColor()
+        node_item["innerHTML"] = innerHTML_head + getBaseUrl() + peo["people_img"] + innerHTML_mid + peo["people_name"] + innerHTML_tail
+        relation["nodes"].append(node_item)
+
+
+
+
+
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["data"] = relation
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getRandomColor():
+    colors = ["#ec6941", "#6cc0ff", "#e1ec41", "#ec9f41", "#e1ec41", "#9dd43e", "#45a01e", "#1cbf24"
+              , "#1cbf9e", "#1c78bf", "#3234c2", "#6932c2", "#9732c2", "#dc3be8", "#e83b78"]
+    index = random.randint(0, 14)
+    return colors[index]

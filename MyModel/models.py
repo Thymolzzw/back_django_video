@@ -52,6 +52,16 @@ class People(models.Model):
         db_table = 'people'
 
 
+class PeopleRelation(models.Model):
+    from_field = models.IntegerField(db_column='from')  # Field renamed because it was a Python reserved word.
+    to = models.IntegerField()
+    text = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'people_relation'
+
+
 class SourceInformation(models.Model):
     name = models.CharField(max_length=255)
     introduce = models.TextField(blank=True, null=True)

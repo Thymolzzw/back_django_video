@@ -806,28 +806,6 @@ def updateEquipment(request):
     resp["status"] = 1
     return HttpResponse(JsonResponse(resp), content_type="application/json")
 
-def updateFace(request):
-    curPath = os.path.abspath(os.path.dirname(__file__))
-    split_reg = curPath.split(os.sep)[-1]
-    curPath = curPath.split(split_reg)[0] + split_reg
-
-    videoId = request.POST.get('videoId')
-    peopleIndex = request.POST.get('faceIndex')
-    peopleName = request.POST.get('faceName')
-    video = Videos.objects.filter(id=videoId).first()
-    arr = np.load(
-        curPath + '/' + video.face_npy_path,
-        allow_pickle=True)
-    print("arr", arr)
-    arr[int(peopleIndex)][0] = peopleName
-    print("arr", arr)
-    np.save(curPath + '/' + video.face_npy_path, arr)
-
-    resp = {}
-    resp["code"] = 20000
-    resp["msg"] = ""
-    resp["status"] = 1
-    return HttpResponse(JsonResponse(resp), content_type="application/json")
 
 
 
