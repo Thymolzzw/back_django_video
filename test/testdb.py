@@ -9,8 +9,8 @@ import numpy as np
 import pdfkit
 import pymysql
 
-data = [1, 2, 3, 4, 5]
-if 1 in data:
+data = ["1", "2", "3", "4", "5"]
+if "1" in data:
     print('ok')
 
 

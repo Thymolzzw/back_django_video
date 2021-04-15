@@ -7,6 +7,7 @@ import time
 import uuid
 from datetime import datetime
 import json
+from shutil import copyfile
 
 import cv2
 import pytz
@@ -15,7 +16,7 @@ from django.core import serializers
 import numpy as np
 from django.http import HttpResponse, JsonResponse, response
 from django.shortcuts import render, redirect
-from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country
+from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
@@ -792,6 +793,7 @@ def updateFaceItem(request):
     return HttpResponse(JsonResponse(resp), content_type="application/json")
 
 def getFace(request):
+    reloadPeopleImg()
     videoId = request.GET.get("videoId")
     # print("getface")
     video = Videos.objects.filter(id=videoId).first()
@@ -1268,17 +1270,18 @@ def getPeopleList(request):
 
 
 def getPeopleRelation(request):
+    reloadPeopleImg()
 
     innerHTML_head = '<div class="c-my-node" style="background-image: url('
-    innerHTML_mid = ');border:#ff875e solid 3px;"><div class="c-node-name" style="color:#ff875e">'
+    innerHTML_mid = ');border:%s solid 3px;"><div class="c-node-name" style="color:%s">'
     innerHTML_tail = '</div></div>'
 
-    video = Videos.objects.filter(id='136').first()
+    video = Videos.objects.filter(id='137').first()
     relation = {
         "rootId": video.title,
         "nodes": [
-            {"id": video.title, "text": video.title, "color": '#ec6941', "borderColor": 'yellow',
-            'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid + video.title + innerHTML_tail
+            {"id": video.title, "text": video.title, "color": '#ec6941', "borderColor": '#67C23A',
+            'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid%(getRandomColor(), getRandomColor()) + video.title + innerHTML_tail
             },
         ],
         "links": []
@@ -1288,31 +1291,36 @@ def getPeopleRelation(request):
     curPath = curPath.split(split_reg)[0] + split_reg
 
     video_people = []
+    appear_people_list = []
     if video.face_npy_path != None and video.face_npy_path != "" \
             and os.path.exists(os.path.join(curPath, video.face_npy_path)):
         loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
-        print(loadData)
+        # print(loadData)
         for item in loadData:
             new_item = {}
             new_item['people_name'] = item[0]
             peo = People.objects.filter(name = item[0]).first()
             new_item['people_id'] = peo.id
+            appear_people_list.append(new_item['people_id'])
             if peo.img == None or peo == "":
                 new_item['people_img'] = 'statics/resource/images/head_default.jpg'
             else:
                 new_item['people_img'] = peo.img
             video_people.append(new_item)
         print(video_people)
+
     for peo in video_people:
+        # 添加节点
         node_item = {}
         node_item["id"] = peo["people_id"]
         node_item["text"] = peo["people_name"]
         node_item["borderColor"] = getRandomColor()
         node_item["color"] = getRandomColor()
-        node_item["innerHTML"] = innerHTML_head + getBaseUrl() + peo["people_img"] + innerHTML_mid + peo["people_name"] + innerHTML_tail
+        node_item["innerHTML"] = innerHTML_head + getBaseUrl() + peo["people_img"] + innerHTML_mid%(getRandomColor(), getRandomColor()) + peo["people_name"] + innerHTML_tail
         relation["nodes"].append(node_item)
 
+        # 添加边
         relation_item = {}
         relation_item["from"] = video.title
         relation_item["to"] = str(peo["people_id"])
@@ -1320,11 +1328,91 @@ def getPeopleRelation(request):
         relation_item["color"] = getRandomColor()
         relation["links"].append(relation_item)
 
+        # 遍历人物
+        # from
+        peo_relation_list = PeopleRelation.objects.filter(from_field=peo["people_id"])
+        for rel in peo_relation_list:
+            if rel.to not in appear_people_list:
+                # 没出现过
+                # 添加node
+                p = People.objects.filter(id=rel.to).first()
+                if p.img == None or p.img == "":
+                    p.img = 'statics/resource/images/head_default.jpg'
+                node_item = {}
+                node_item["id"] = str(p.id)
+                node_item["text"] = p.name
+                node_item["borderColor"] = getRandomColor()
+                node_item["color"] = getRandomColor()
+                node_item["innerHTML"] = innerHTML_head + getBaseUrl() + p.img + innerHTML_mid%(getRandomColor(), getRandomColor()) + p.name + innerHTML_tail
+                relation["nodes"].append(node_item)
+                appear_people_list.append(p.id)
+                # 添加边
+                relation_item = {}
+                relation_item["from"] = str(rel.from_field)
+                relation_item["to"] = str(rel.to)
+                relation_item["text"] = rel.text
+                relation_item["color"] = getRandomColor()
+                relation["links"].append(relation_item)
+            else:
+                # 是否已经存在改边
+                i = 0
+                while i < len(relation["links"]):
+                    if relation["links"][i]["from"] == str(rel.from_field) and relation["links"][i]["to"] == str(rel.to):
+                        break
+                    else:
+                        i += 1
+                if i == len(relation["links"]):
+                    # 添加边
+                    relation_item = {}
+                    relation_item["from"] = str(rel.from_field)
+                    relation_item["to"] = str(rel.to)
+                    relation_item["text"] = rel.text
+                    relation_item["color"] = getRandomColor()
+                    relation["links"].append(relation_item)
+
+        # to
+        peo_relation_list = PeopleRelation.objects.filter(to=peo["people_id"])
+        for rel in peo_relation_list:
+            if rel.from_field not in appear_people_list:
+                # 没出现过
+                # 添加node
+                p = People.objects.filter(id=rel.from_field).first()
+                if p.img == None or p.img == "":
+                    p.img = 'statics/resource/images/head_default.jpg'
+                node_item = {}
+                node_item["id"] = str(p.id)
+                node_item["text"] = p.name
+                node_item["borderColor"] = getRandomColor()
+                node_item["color"] = getRandomColor()
+                node_item["innerHTML"] = innerHTML_head + getBaseUrl() + p.img + innerHTML_mid%(getRandomColor(), getRandomColor()) + p.name + innerHTML_tail
+                relation["nodes"].append(node_item)
+                appear_people_list.append(p.id)
+                # 添加边
+                relation_item = {}
+                relation_item["from"] = str(rel.from_field)
+                relation_item["to"] = str(rel.to)
+                relation_item["text"] = rel.text
+                relation_item["color"] = getRandomColor()
+                relation["links"].append(relation_item)
+            else:
+                # 是否已经存在改边
+                i = 0
+                while i < len(relation["links"]):
+                    if relation["links"][i]["from"] == str(rel.from_field) and relation["links"][i]["to"] == str(
+                            rel.to):
+                        break
+                    else:
+                        i += 1
+                if i == len(relation["links"]):
+                    # 添加边
+                    relation_item = {}
+                    relation_item["from"] = str(rel.from_field)
+                    relation_item["to"] = str(rel.to)
+                    relation_item["text"] = rel.text
+                    relation_item["color"] = getRandomColor()
+                    relation["links"].append(relation_item)
 
 
-
-
-    print(relation)
     resp = {}
     resp["code"] = 20000
     resp["msg"] = ""
@@ -1338,3 +1426,28 @@ def getRandomColor():
               , "#1cbf9e", "#1c78bf", "#3234c2", "#6932c2", "#9732c2", "#dc3be8", "#e83b78"]
     index = random.randint(0, 14)
     return colors[index]
+
+
+def reloadPeopleImg():
+    people_list = People.objects.all()
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = 'demo_django'
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    for peo in people_list:
+        if peo.img == None or peo.img == "":
+            # 添加头像
+            imgs_path = os.path.join(curPath, 'demo_django', 'sq_face_recignition', 'train', peo.name.replace('.', ''))
+            print(imgs_path)
+            images = os.listdir(imgs_path)
+            print(images)
+            if len(images) > 0:
+                # 开始添加头像
+                img_path = os.path.join(imgs_path, images[0])
+                head_db_path = 'statics/resource/head/' + peo.name.replace('.', '') + '.' + images[0].split('.')[-1]
+                head_path = os.path.join(curPath, head_db_path)
+                print(head_path)
+                print(img_path)
+                copyfile(img_path, head_path)
+                peo.img = head_db_path
+                peo.save()
