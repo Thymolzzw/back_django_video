@@ -1277,11 +1277,11 @@ def getPeopleRelation(request):
     relation = {
         "rootId": video.title,
         "nodes": [
-            {"id": video.title, "text": "video.title", "color": '#ec6941', "borderColor": 'yellow',
+            {"id": video.title, "text": video.title, "color": '#ec6941', "borderColor": 'yellow',
             'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid + video.title + innerHTML_tail
             },
         ],
-        "links": [{"from": 'a', "to": 'b', "text": '关系5', "color": '#67C23A'}]
+        "links": []
     }
     curPath = os.path.abspath(os.path.dirname(__file__))
     split_reg = 'demo_django'
@@ -1313,10 +1313,18 @@ def getPeopleRelation(request):
         node_item["innerHTML"] = innerHTML_head + getBaseUrl() + peo["people_img"] + innerHTML_mid + peo["people_name"] + innerHTML_tail
         relation["nodes"].append(node_item)
 
+        relation_item = {}
+        relation_item["from"] = video.title
+        relation_item["to"] = str(peo["people_id"])
+        relation_item["text"] = "出现"
+        relation_item["color"] = getRandomColor()
+        relation["links"].append(relation_item)
 
 
 
 
+
+    print(relation)
     resp = {}
     resp["code"] = 20000
     resp["msg"] = ""
