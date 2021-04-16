@@ -185,7 +185,7 @@ def getSubTitle(request):
 
     print('subTitle', subTitle)
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["subTitle"] = subTitle
@@ -237,7 +237,7 @@ def getSubTitleForUpdate(request):
 
     # print('subTitle', subTitle)
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["subTitle"] = subTitle
@@ -360,7 +360,7 @@ def getVideoAdditionData(request):
     addition_data["video_tag"] = tag_list
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["addition_data"] = addition_data
@@ -381,7 +381,7 @@ def getCountryList(request):
         countrys.append(temp)
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["data"] = countrys
@@ -402,7 +402,7 @@ def getResourceList(request):
         resources.append(temp)
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["data"] = resources
@@ -661,7 +661,7 @@ def getVideoPPT(request):
             ppt_json = load_dict
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["ppt_json"] = ppt_json
@@ -832,7 +832,7 @@ def getFace(request):
                 if people.introduce == None or people.introduce == "":
                     introduce = None
                     try:
-                        # introduce = wiki_api(people.name)
+                        introduce = wiki_api(people.name)
                         pass
                     except:
                         pass
@@ -853,7 +853,7 @@ def getFace(request):
                 people = People.objects.create(name=item_item["name"], is_delete=0)
                 introduce = None
                 try:
-                    # introduce = wiki_api(people.name)
+                    introduce = wiki_api(people.name)
                     pass
                 except:
                     pass
@@ -867,7 +867,7 @@ def getFace(request):
 
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["face_data"] = face_data
@@ -900,7 +900,7 @@ def getText(request):
                 pass
 
     resp = {}
-    resp["code"] = 0
+    resp["code"] = 20000
     resp["msg"] = ""
     resp["status"] = 1
     resp["text_data"] = text_data
@@ -1276,13 +1276,16 @@ def getPeopleRelation(request):
     innerHTML_mid = ');border:%s solid 3px;"><div class="c-node-name" style="color:%s">'
     innerHTML_tail = '</div></div>'
 
-    video = Videos.objects.filter(id='137').first()
+    video_id = request.POST.get('videoId')
+
+    video = Videos.objects.filter(id=video_id).first()
     relation = {
         "rootId": video.title,
         "nodes": [
             {"id": video.title, "text": video.title, "color": '#ec6941', "borderColor": '#67C23A',
-            'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid%(getRandomColor(), getRandomColor()) + video.title + innerHTML_tail
-            },
+             'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid % (
+             getRandomColor(), getRandomColor()) + video.title + innerHTML_tail
+             },
         ],
         "links": []
     }
@@ -1435,7 +1438,7 @@ def reloadPeopleImg():
     curPath = curPath.split(split_reg)[0] + split_reg
 
     for peo in people_list:
-        if peo.img == None or peo.img == "":
+        if peo.img == None or peo.img == "" or not os.path.exists(os.path.join(curPath, peo.img)):
             # 添加头像
             imgs_path = os.path.join(curPath, 'demo_django', 'sq_face_recignition', 'train', peo.name.replace('.', ''))
             print(imgs_path)
