@@ -56,6 +56,7 @@ class PeopleRelation(models.Model):
     from_field = models.IntegerField(db_column='from')  # Field renamed because it was a Python reserved word.
     to = models.IntegerField()
     text = models.CharField(max_length=255, blank=True, null=True)
+    is_delete = models.IntegerField()
 
     class Meta:
         managed = False

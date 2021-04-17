@@ -66,5 +66,8 @@ urlpatterns = [
     path('changeVoicePrint', views.changeVoicePrint),
     path('deleteEquipment', back_views.deleteEquipment),
     path('getPeopleRelation', views.getPeopleRelation),
+    path('getPeopleRelationList', views.getPeopleRelationList),
+    path('deletePeopleRealtion', views.deletePeopleRealtion),
+    path('addEditPeopleRelation', views.addEditPeopleRelation),
 
 ]

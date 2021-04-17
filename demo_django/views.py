@@ -356,7 +356,7 @@ def getVideoAdditionData(request):
     tag_list = None
     if video.tag != None and video.tag != "":
         tag_list = video.tag.strip().split(' ')
-    print(tag_list)
+    # print(tag_list)
     addition_data["video_tag"] = tag_list
 
     resp = {}
@@ -452,10 +452,19 @@ def addEditResource(request):
             resource_name = request.POST.get('resource_name')
             resource_introduce = request.POST.get('resource_introduce')
             resource_url = request.POST.get('resource_url')
-            resourceList = SourceInformation.objects.filter(name=resource_name, is_delete=0)
+            resourceList = SourceInformation.objects.filter(name=resource_name)
             if len(resourceList) > 0:
-                code = 3000
+                # 数据库中已经存在
+                re = resourceList.first()
+                if re.is_delete != 0:
+                    # 数据库中该记录被删除， 恢复更新内容
+                    re.is_delete = 0
+                    re.introduce = resource_introduce
+                    re.source_url = resource_url
+                    re.save()
+
             else:
+                 # 数据库中不存在
                 resource = SourceInformation.objects.create(name=resource_name, introduce=resource_introduce, source_url=resource_url, is_delete=0)
         elif dialog_status == 'edit':
             #修改数据源
@@ -806,7 +815,7 @@ def getFace(request):
     face_data = None
     if video.face_npy_path != None and video.face_npy_path != ""\
             and os.path.exists(os.path.join(curPath, video.face_npy_path)):
-        print(video.face_npy_path)
+        # print(video.face_npy_path)
         loadData = np.load(os.path.join(curPath, video.face_npy_path)
                            , allow_pickle=True)
 
@@ -1254,7 +1263,7 @@ def getPeopleList(request):
     for resource in sourceList:
         temp = {}
         temp['people_id'] = resource.id
-        temp['people_img'] = resource.img
+        temp['people_img'] = getBaseUrl() + resource.img
         temp['people_introduce'] = resource.introduce
         temp['people_voice_feature_path'] = resource.voice_feature_path
         temp['people_name'] = resource.name
@@ -1283,8 +1292,9 @@ def getPeopleRelation(request):
         "rootId": video.title,
         "nodes": [
             {"id": video.title, "text": video.title, "color": '#ec6941', "borderColor": '#67C23A',
-             'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img + innerHTML_mid % (
-             getRandomColor(), getRandomColor()) + video.title + innerHTML_tail
+                'innerHTML': innerHTML_head + getBaseUrl() + video.snapshoot_img +
+                ');border:%s solid 10px;"><div class="c-node-name" style="color:%s">' % (
+                getRandomColor(), getRandomColor()) + video.title + innerHTML_tail
              },
         ],
         "links": []
@@ -1311,7 +1321,7 @@ def getPeopleRelation(request):
             else:
                 new_item['people_img'] = peo.img
             video_people.append(new_item)
-        print(video_people)
+        # print(video_people)
 
     for peo in video_people:
         # 添加节点
@@ -1425,7 +1435,7 @@ def getPeopleRelation(request):
 
 
 def getRandomColor():
-    colors = ["#ec6941", "#6cc0ff", "#e1ec41", "#ec9f41", "#e1ec41", "#9dd43e", "#45a01e", "#1cbf24"
+    colors = ["#ec6941", "#6cc0ff", "#919926", "#ec9f41", "#79794f", "#9dd43e", "#45a01e", "#1cbf24"
               , "#1cbf9e", "#1c78bf", "#3234c2", "#6932c2", "#9732c2", "#dc3be8", "#e83b78"]
     index = random.randint(0, 14)
     return colors[index]
@@ -1454,3 +1464,90 @@ def reloadPeopleImg():
                 copyfile(img_path, head_path)
                 peo.img = head_db_path
                 peo.save()
+
+def getPeopleRelationList(request):
+    relation_list = []
+    pr_list = PeopleRelation.objects.filter(is_delete=0)
+    for pr in pr_list:
+        item = {}
+        item["id"] = pr.id
+        item["from_field"] = pr.from_field
+        p = People.objects.filter(id=str(pr.from_field)).first()
+        item["from_people_name"] = p.name
+        item["to"] = pr.to
+        p = People.objects.filter(id=str(pr.to)).first()
+        item["to_people_name"] = p.name
+        item["text"] = pr.text
+        relation_list.append(item)
+    pass
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["data"] = relation_list
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def deletePeopleRealtion(request):
+    delete_id = request.POST.get("delete_id")
+    code = 20000
+    try:
+        pr = PeopleRelation.objects.filter(id=delete_id).first()
+        if pr.is_delete == 0:
+            pr.is_delete = 1
+            pr.save()
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def addEditPeopleRelation(request):
+    code = 20000
+    resource = None
+    try:
+        dialog_status = request.POST.get('dialog_status')
+        if dialog_status == 'add':
+            #添加
+            from_field = request.POST.get('from_field')
+            to = request.POST.get('to')
+            text = request.POST.get('text')
+            list = PeopleRelation.objects.filter(from_field=from_field, to=to)
+            if len(list) > 0:
+                # 数据库中已经存在
+                re = list.first()
+                if re.is_delete != 0:
+                    # 数据库中该记录被删除， 恢复更新内容
+                    re.is_delete = 0
+                    re.text = text
+                    re.save()
+
+            else:
+                # 数据库中不存在
+                pe = PeopleRelation.objects.create(from_field=from_field, to=to,
+                                                            text=text, is_delete=0)
+
+        elif dialog_status == 'edit':
+            #修改
+            id = request.POST.get('id')
+            from_field = request.POST.get('from_field')
+            to = request.POST.get('to')
+            text = request.POST.get('text')
+            pe = PeopleRelation.objects.filter(id=id).first()
+            pe.from_field = int(from_field)
+            pe.to = int(to)
+            pe.text = text
+            pe.save()
+        else:
+            code = 2000
+
+
+    except:
+        code = 2000
+
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
