@@ -1002,30 +1002,68 @@ def getBinner(request):
 
 
 def doLogin(request):
-    account_name = request.POST.get("account_name")
+    account_name = request.POST.get("username")
     password = request.POST.get("password")
-    print("password", password)
     password = md5Encode(password)
-    # print(account_name+password)
+    print(account_name, password)
+    # print(account_name + "##" + password)
     user = Users.objects.filter(account_name=account_name, password=password)
-    # print(user)
+    # print(len(user))
     if len(user) != 0:
-        user = serializers.serialize("json", user)
+        user = user.first()
+
         return HttpResponse(JsonResponse({
             "code": 20000,
             "msg": "成功查找到该用户，该用户存在！",
             "status": 1,
-            "data": json.loads(user)
+            "token": user.account_name,
         }), content_type="application/json")
     else:
+        return HttpResponse(JsonResponse({
+            "code": 2000,
+            "msg": "该用户不存在！",
+            "status": 1,
+            "token": None,
+        }), content_type="application/json")
+
+def getUserInfo(request):
+    token = request.GET.get("token")
+    print("token", token)
+    user = Users.objects.filter(account_name=token)
+    if len(user) > 0:
+        # 存在该用户
+        user = user.first()
+        roles = []
+        if user.type == 1:
+            # 普通用户
+            roles.append("visitor")
+        elif user.type == 2:
+            # 专家
+            roles.append("editor")
+        elif user.type == 3:
+            # 管理员
+            roles.append("admin")
+        current_user = {
+            "id": user.id,
+            "name": user.name,
+            "account_name": user.account_name,
+            "password": user.password,
+            "type": user.type,
+            "roles": roles
+        }
         return HttpResponse(JsonResponse({
             "code": 20000,
             "msg": "该用户不存在！",
             "status": 1,
-            "data": {
-                "account_name": account_name,
-                "password": password,
-            }
+            "data": current_user,
+        }), content_type="application/json")
+    else:
+        # 不存在该用户
+        return HttpResponse(JsonResponse({
+            "code": 2000,
+            "msg": "该用户不存在！",
+            "status": 1,
+            "data": None,
         }), content_type="application/json")
 
 def doSignUp(request):
@@ -1060,29 +1098,6 @@ def doSignUp(request):
             }
         }), content_type="application/json")
 
-
-def getUserInfo(request):
-    print("jihru")
-    account_name = request.POST.get("account_name")
-    print("account_name", account_name)
-    user = Users.objects.filter(account_name=account_name)
-    if len(user) != 0:
-        return HttpResponse(JsonResponse({
-            "code": 20000,
-            "msg": "用户存在！",
-            "status": 1,
-            "data": {
-                "role": user.type
-            }
-        }), content_type="application/json")
-    else:
-        return HttpResponse(JsonResponse({
-            "code": 20000,
-            "msg": "error ！",
-            "status": 1,
-            "data": {
-            }
-        }), content_type="application/json")
 
 
 

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -9,9 +10,15 @@ import numpy as np
 import pdfkit
 import pymysql
 
-data = ["1", "2", "3", "4", "5"]
-if "1" in data:
-    print('ok')
+m = hashlib.md5()
+b = "bbbbbb".encode(encoding='utf-8')
+m.update(b)
+str_md5 = m.hexdigest()
+print(str_md5)
+
+# data = ["1", "2", "3", "4", "5"]
+# if "1" in data:
+#     print('ok')
 
 
 # def srt2vtt(file_name):
