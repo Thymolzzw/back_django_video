@@ -74,7 +74,7 @@ def uploadvideo(request):
     video = Videos.objects.create(name=file_name, rel_path=video_path_db, introduce=file_name,
                               create_time=int(time.time()),
                               tag=tag, title=title,
-                              source_id=source_id, is_delete=0,
+                              source_id=source_id, is_delete=0, view_volume=0
                               )
 
 

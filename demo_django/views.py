@@ -16,7 +16,7 @@ from django.core import serializers
 import numpy as np
 from django.http import HttpResponse, JsonResponse, response
 from django.shortcuts import render, redirect
-from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation
+from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation, Collection
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
@@ -1007,7 +1007,7 @@ def doLogin(request):
     password = md5Encode(password)
     print(account_name, password)
     # print(account_name + "##" + password)
-    user = Users.objects.filter(account_name=account_name, password=password)
+    user = Users.objects.filter(account_name=account_name, password=password, is_delete=0)
     # print(len(user))
     if len(user) != 0:
         user = user.first()
@@ -1016,7 +1016,7 @@ def doLogin(request):
             "code": 20000,
             "msg": "成功查找到该用户，该用户存在！",
             "status": 1,
-            "token": user.account_name,
+            "token": str(user.id),
         }), content_type="application/json")
     else:
         return HttpResponse(JsonResponse({
@@ -1029,7 +1029,7 @@ def doLogin(request):
 def getUserInfo(request):
     token = request.GET.get("token")
     print("token", token)
-    user = Users.objects.filter(account_name=token)
+    user = Users.objects.filter(id=token)
     if len(user) > 0:
         # 存在该用户
         user = user.first()
@@ -1049,7 +1049,10 @@ def getUserInfo(request):
             "account_name": user.account_name,
             "password": user.password,
             "type": user.type,
-            "roles": roles
+            "roles": roles,
+            "introduce": user.introduce,
+            "email": user.email,
+            "avatar": 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
         }
         return HttpResponse(JsonResponse({
             "code": 20000,
@@ -1066,36 +1069,214 @@ def getUserInfo(request):
             "data": None,
         }), content_type="application/json")
 
-def doSignUp(request):
-    name = request.GET.get("name")
-    account_name = request.GET.get("account_name")
-    password = request.GET.get("password")
-    password = md5Encode(password)
-    # print(password)
+def editUserInfo(request):
+    user_id = request.POST.get("user_id")
+    user_account_name = request.POST.get("user_account_name")
+    user_password = request.POST.get("user_password")
+    user_real_name = request.POST.get("user_real_name")
+    user_introduce = request.POST.get("user_introduce")
+    user_email = request.POST.get("user_email")
+    # print("user_id", user_id)
+    code = 20000
+    try:
+        user = Users.objects.filter(account_name=user_account_name)
+        if len(user) > 0:
+            user = user.first()
+            if user.id != int(user_id):
+                # 账户名已存在
+                code = 3000
+                return HttpResponse(JsonResponse({
+                    "code": code,
+                    "msg": "",
+                    "status": 1,
+                }), content_type="application/json")
 
-    user = Users.objects.filter(name=name)
-    if len(user) != 0:
+        user = Users.objects.filter(id=user_id).first()
+        user.account_name = user_account_name
+        if user_password != '':
+            user.password = md5Encode(user_password)
+        user.name = user_real_name
+        user.introduce = user_introduce
+        user.email = user_email
+        user.save()
+    except:
+        code = 2000
+        pass
+    return HttpResponse(JsonResponse({
+        "code": code,
+        "msg": "",
+        "status": 1,
+    }), content_type="application/json")
+
+def adminEditUserInfo(request):
+    user = None
+    user_id = request.POST.get("id")
+    user_account_name = request.POST.get("account_name")
+    user_is_delete = request.POST.get('is_delete')
+    user_type = request.POST.get('type')
+    user_password = request.POST.get("password")
+    user_real_name = request.POST.get("name")
+    user_introduce = request.POST.get("introduce")
+    user_email = request.POST.get("email")
+    # print("user_id", user_id)
+    code = 20000
+    try:
+        user = Users.objects.filter(account_name=user_account_name)
+        if len(user) > 0:
+            user = user.first()
+            if user.id != int(user_id):
+                # 账户名已存在
+                code = 3000
+                return HttpResponse(JsonResponse({
+                    "code": code,
+                    "msg": "",
+                    "status": 1,
+                }), content_type="application/json")
+
+        user = Users.objects.filter(id=user_id).first()
+        user.account_name = user_account_name
+        if user_password != '':
+            user.password = md5Encode(user_password)
+        user.name = user_real_name
+        user.introduce = user_introduce
+        user.email = user_email
+        if user_is_delete == '0' or user_is_delete == '1':
+            user.is_delete = int(user_is_delete)
+        if user_type == '1' or user_type == '2' or user_type == '3':
+            user.type = int(user_type)
+
+        user.save()
+    except:
+        code = 2000
         return HttpResponse(JsonResponse({
-            "code": 20000,
-            "msg": "用户已经存在！",
+            "code": code,
+            "msg": "",
             "status": 1,
-            "data": {
-                "name": name,
-                "account_name": account_name,
-                "password": password
-            }
         }), content_type="application/json")
+    user = Users.objects.filter(id=user_id)
+    return HttpResponse(JsonResponse({
+        "code": code,
+        "msg": "",
+        "status": 1,
+        "data": json.loads(serializers.serialize("json", user))
+    }), content_type="application/json")
+
+def getUserList(request):
+    users = Users.objects.filter()
+    for user in users:
+        user.password = ''
+
+    return HttpResponse(JsonResponse({
+        "code": 20000,
+        "msg": "",
+        "status": 1,
+        "data": json.loads(serializers.serialize("json", users))
+    }), content_type="application/json")
+
+def delUser(request):
+    code = 20000
+    try:
+        user_id = request.GET.get('user_id')
+        user = Users.objects.filter(id=user_id).first()
+        user.is_delete = 1
+        user.save()
+    except:
+        code = 2000
+
+    return HttpResponse(JsonResponse({
+        "code": code,
+        "msg": "",
+        "status": 1,
+    }), content_type="application/json")
+
+def addUser(request):
+    register_account_name = request.POST.get("account_name")
+    register_password = request.POST.get("password")
+    register_email = request.POST.get("email")
+    register_introduce = request.POST.get("introduce")
+    register_type = request.POST.get("type")
+    register_name = request.POST.get("name")
+    try:
+        register_password = md5Encode(register_password)
+    except:
+        pass
+    user = Users.objects.filter(account_name=register_account_name)
+    if len(user) != 0:
+        user = user.first()
+        if user.is_delete != 0:
+            # 用户已删除，恢复该用户
+            user.is_delete = 0
+            user.account_name = register_account_name
+            user.password = register_password
+            user.email = register_email
+            user.type = int(register_type)
+            user.introduce = register_introduce
+            user.name = register_name
+            user.save()
+            return HttpResponse(JsonResponse({
+                "code": 20000,
+                "msg": "用户注册成功！",
+                "status": 1,
+                "data": json.loads(serializers.serialize("json", [user]))
+            }), content_type="application/json")
+        else:
+            # 用户未删除，已存在
+            return HttpResponse(JsonResponse({
+                "code": 2000,
+                "msg": "用户已经存在！",
+                "status": 1,
+            }), content_type="application/json")
     else:
-        user_save = Users(name=name, account_name=account_name, password=password, type=1)
-        user_save.save()
+        user = Users.objects.create(name=register_account_name, account_name=register_account_name,
+                                    password=register_password, email=register_email, introduce=register_introduce, is_delete=0, type=int(register_type))
         return HttpResponse(JsonResponse({
             "code": 20000,
             "msg": "用户注册成功！",
             "status": 1,
-            "data": {
-                "name": name,
-                "account_name": account_name
-            }
+            "data": json.loads(serializers.serialize("json", [user]))
+        }), content_type="application/json")
+
+def doSignUp(request):
+    register_account_name = request.POST.get("register_account_name")
+    register_password = request.POST.get("register_password")
+    register_email = request.POST.get("register_email")
+    try:
+        register_password = md5Encode(register_password)
+    except:
+        pass
+    # print(password)
+
+    user = Users.objects.filter(account_name=register_account_name)
+    if len(user) != 0:
+        user = user.first()
+        if user.is_delete != 0:
+            # 用户已删除，恢复该用户
+            user.is_delete = 0
+            user.account_name = register_account_name
+            user.password = register_password
+            user.email = register_email
+            user.save()
+            return HttpResponse(JsonResponse({
+                "code": 20000,
+                "msg": "用户注册成功！",
+                "status": 1,
+                "token": str(user.id),
+            }), content_type="application/json")
+        else:
+            # 用户未删除，用户存在
+            return HttpResponse(JsonResponse({
+                "code": 2000,
+                "msg": "用户已经存在！",
+                "status": 1,
+            }), content_type="application/json")
+    else:
+        user = Users.objects.create(name=register_account_name, account_name=register_account_name,
+                                    password=register_password, email=register_email, introduce='', is_delete=0, type=1)
+        return HttpResponse(JsonResponse({
+            "code": 20000,
+            "msg": "用户注册成功！",
+            "status": 1,
+            "token": str(user.id),
         }), content_type="application/json")
 
 
@@ -1565,4 +1746,92 @@ def addEditPeopleRelation(request):
     resp["code"] = code
     resp["msg"] = ""
     resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getCollect(request):
+    videoId = request.GET.get('videoId')
+    user_id = request.GET.get('user_id')
+    co = Collection.objects.filter(user_id=int(user_id), video_id=int(videoId))
+    code = 20000
+    if len(co) > 0:
+        # 存在
+        pass
+    else:
+        # 不存在
+        code = 2000
+        pass
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def doCollect(request):
+    videoId = request.GET.get('videoId')
+    user_id = request.GET.get('user_id')
+    co = Collection.objects.filter(user_id=int(user_id), video_id=int(videoId))
+    code = 20000
+    if len(co) > 0:
+        # 存在则删除
+        co = co.first()
+        co.delete()
+        code = 2000
+    else:
+        # 不存在则添加
+        co = Collection.objects.create(user_id=int(user_id), video_id=int(videoId), time=int(time.time()))
+        pass
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getLikes(request):
+    user_id = request.GET.get('user_id')
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+    code = 20000
+    co_list = Collection.objects.filter(user_id=user_id)
+    videos = []
+    for co in co_list:
+        videoList = Videos.objects.filter(id=co.video_id)
+        for video in videoList:
+            # 没有缩略图会自动生成
+            if video.snapshoot_img != None and video.snapshoot_img != "" and os.path.exists(
+                    curPath + '/' + video.snapshoot_img):
+                video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+            else:
+                # 抽帧作为缩略图
+                image_path = os.path.join(curPath, 'statics', 'resource', 'images', video.name.split(".")[0] + ".png")
+                image_path_db = 'statics/' + 'resource/' + 'images/' + video.name.split(".")[0] + ".png"
+                video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', video.name))
+                extract_image(video_path, image_path=image_path)
+                video.snapshoot_img = image_path_db
+                video.save()
+                video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+
+            # create time formate
+            video.rel_path = getBaseUrl() + video.rel_path
+
+            if video.text_location != None:
+                video.text_location = getBaseUrl() + video.text_location
+            if video.subtitle != None:
+                video.subtitle = getBaseUrl() + video.subtitle
+            if video.asr_path != None:
+                video.asr_path = getBaseUrl() + video.asr_path
+            video.create_time = formate_time(video.create_time)
+        temp = {}
+        temp['time'] = formate_time(int(co.time))
+        temp['video_object'] = json.loads(serializers.serialize("json", videoList))
+        videos.append(temp)
+    # videos = serializers.serialize("json", videos)
+
+    if len(videos) == 0:
+        code = 2000
+
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = videos
     return HttpResponse(JsonResponse(resp), content_type="application/json")

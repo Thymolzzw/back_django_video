@@ -69,5 +69,12 @@ urlpatterns = [
     path('getPeopleRelationList', views.getPeopleRelationList),
     path('deletePeopleRealtion', views.deletePeopleRealtion),
     path('addEditPeopleRelation', views.addEditPeopleRelation),
-
+    path('editUserInfo', views.editUserInfo),
+    path('doCollect', views.doCollect),
+    path('getCollect', views.getCollect),
+    path('getLikes', views.getLikes),
+    path('getUserList', views.getUserList),
+    path('delUser', views.delUser),
+    path('adminEditUserInfo', views.adminEditUserInfo),
+    path('addUser', views.addUser),
 ]

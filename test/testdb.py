@@ -11,7 +11,7 @@ import pdfkit
 import pymysql
 
 m = hashlib.md5()
-b = "bbbbbb".encode(encoding='utf-8')
+b = "11111111".encode(encoding='utf-8')
 m.update(b)
 str_md5 = m.hexdigest()
 print(str_md5)

@@ -17,6 +17,16 @@ class Binner(models.Model):
         db_table = 'binner'
 
 
+class Collection(models.Model):
+    user_id = models.IntegerField()
+    video_id = models.IntegerField()
+    time = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'collection'
+
+
 class Country(models.Model):
     name = models.CharField(max_length=255)
     introduce = models.TextField(blank=True, null=True)
@@ -29,7 +39,7 @@ class Country(models.Model):
 
 class Operations(models.Model):
     id = models.IntegerField(primary_key=True)
-    operation_type = models.CharField(max_length=255)
+    operation_type = models.IntegerField()
     user_id = models.IntegerField()
     video_id = models.IntegerField()
     comment = models.TextField(blank=True, null=True)
@@ -79,6 +89,9 @@ class Users(models.Model):
     account_name = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
     type = models.IntegerField()
+    introduce = models.TextField(blank=True, null=True)
+    email = models.CharField(max_length=255, blank=True, null=True)
+    is_delete = models.IntegerField()
 
     class Meta:
         managed = False
@@ -103,12 +116,13 @@ class Videos(models.Model):
     ppt_json_path = models.CharField(max_length=255, blank=True, null=True)
     face_npy_path = models.CharField(max_length=255, blank=True, null=True)
     create_user = models.IntegerField(blank=True, null=True)
-    is_delete = models.IntegerField(blank=True, null=True)
+    is_delete = models.IntegerField()
     voice_json = models.CharField(max_length=255, blank=True, null=True)
     border_video_path = models.CharField(max_length=255, blank=True, null=True)
     translate_asr_path = models.CharField(max_length=255, blank=True, null=True)
     translate_subtitle = models.CharField(max_length=255, blank=True, null=True)
     text_pdf_location = models.CharField(max_length=255, blank=True, null=True)
+    view_volume = models.BigIntegerField()
 
     class Meta:
         managed = False
