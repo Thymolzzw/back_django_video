@@ -17,6 +17,7 @@ from MyModel.models import Users, Videos, Binner, People, SourceInformation, Cou
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
+from demo_django.asr.KDXF_ASR.asr_api import asr_subtitle_kdxf
 from demo_django.asr.pyTranscriber.asr_api import asr_subtitle
 # from demo_django.darknet.ObjectDetection_API import objectDetection
 from demo_django.ppt.ppt_api import ppt_api
@@ -151,7 +152,8 @@ def uploadvideo(request):
 
         if '4' in functions:
             # asr 语音识别，生成字幕文件
-            asr_subtitle(video_path, os.path.join(curPath, 'statics', 'resource', 'audio_text'))
+            # asr_subtitle(video_path, os.path.join(curPath, 'statics', 'resource', 'audio_text'))
+            asr_subtitle_kdxf(video_path, os.path.join(curPath, 'statics', 'resource', 'audio_text'))
             asr_path = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".txt"
             subtitle = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".srt"
             video.subtitle = subtitle
