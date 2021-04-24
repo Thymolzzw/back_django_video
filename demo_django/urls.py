@@ -77,4 +77,6 @@ urlpatterns = [
     path('delUser', views.delUser),
     path('adminEditUserInfo', views.adminEditUserInfo),
     path('addUser', views.addUser),
+    path('clickVideo', views.clickVideo),
+    path('getHotVideos', views.getHotVideos),
 ]

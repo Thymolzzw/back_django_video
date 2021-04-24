@@ -16,7 +16,8 @@ from django.core import serializers
 import numpy as np
 from django.http import HttpResponse, JsonResponse, response
 from django.shortcuts import render, redirect
-from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation, Collection
+from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation, Collection, \
+    Operations
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
@@ -98,6 +99,44 @@ def streamVideo(request):
     # print("path", path)
     return stream_video(request, path)
 
+def getHotVideos(request):
+    video_lists = Videos.objects.filter(is_delete=0).order_by("view_volume")
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+    for video in video_lists:
+        # 没有缩略图会自动生成
+        if video.snapshoot_img != None and video.snapshoot_img != "" and os.path.exists(curPath + '/' + video.snapshoot_img):
+            video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+        else:
+            # 抽帧作为缩略图
+            image_path = os.path.join(curPath, 'statics', 'resource', 'images', video.name.split(".")[0] + ".png")
+            image_path_db = 'statics/' + 'resource/' + 'images/' + video.name.split(".")[0] + ".png"
+            video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', video.name))
+            extract_image(video_path, image_path=image_path)
+            video.snapshoot_img = image_path_db
+            video.save()
+            video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+
+        # create time formate
+        video.rel_path = getBaseUrl() + video.rel_path
+
+        if video.text_location != None:
+            video.text_location = getBaseUrl() + video.text_location
+        if video.subtitle != None:
+            video.subtitle = getBaseUrl() + video.subtitle
+        if video.asr_path != None:
+            video.asr_path = getBaseUrl() + video.asr_path
+        video.create_time = formate_time(video.create_time)
+    videos = serializers.serialize("json", video_lists)
+
+    return HttpResponse(JsonResponse({
+        "code": 0,
+        "msg": "",
+        "status": 1,
+        "data": json.loads(videos)
+    }), content_type="application/json")
+
 def getAllVideos(request):
     video_lists = Videos.objects.filter(is_delete=0)
     curPath = os.path.abspath(os.path.dirname(__file__))
@@ -128,7 +167,6 @@ def getAllVideos(request):
             video.asr_path = getBaseUrl() + video.asr_path
         video.create_time = formate_time(video.create_time)
     videos = serializers.serialize("json", video_lists)
-
 
     return HttpResponse(JsonResponse({
         "code": 0,
@@ -1834,4 +1872,21 @@ def getLikes(request):
     resp["code"] = code
     resp["msg"] = ""
     resp["data"] = videos
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def clickVideo(request):
+    code = 20000
+    videoId = request.GET.get('videoId')
+    user_id = request.GET.get('user_id')
+    try:
+        video = Videos.objects.filter(id=videoId).first()
+        video.view_volume = video.view_volume + 1
+        video.save()
+        oper = Operations.objects.create(operation_type=1, user_id=user_id,
+                                     video_id=videoId, operation_time=int(time.time()))
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
     return HttpResponse(JsonResponse(resp), content_type="application/json")
