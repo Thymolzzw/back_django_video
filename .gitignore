@@ -35,6 +35,7 @@ var/
 *.srt
 templates/
 statics/
+test/
 
 
 # PyInstaller
