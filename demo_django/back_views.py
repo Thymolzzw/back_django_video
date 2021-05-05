@@ -47,7 +47,7 @@ def uploadvideo(request):
     functions = request.POST.get("functions")
     tag = request.POST.get("tag")
     print("function", functions)
-    print("title" + title)
+    # print("title" + title)
     print("aa---------------------------------进入！")
 
     curPath = os.path.abspath(os.path.dirname(__file__))

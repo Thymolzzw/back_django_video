@@ -79,4 +79,8 @@ urlpatterns = [
     path('addUser', views.addUser),
     path('clickVideo', views.clickVideo),
     path('getHotVideos', views.getHotVideos),
+    path('getViewHistory', views.getViewHistory),
+    path('addComment', views.addComment),
+    path('getCommentList', views.getCommentList),
+    path('getComments', views.getComments),
 ]

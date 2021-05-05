@@ -193,9 +193,9 @@ def extract_audio(filename, channels=1, rate=16000):
         print("The given file does not exist: {}".format(filename))
         raise Exception("Invalid filepath: {}".format(filename))
     program_ffmpeg = which("ffmpeg")
-    if not program_ffmpeg:
-        print("ffmpeg: Executable not found on machine.")
-        raise Exception("Dependency not found: ffmpeg")
+    # if not program_ffmpeg:
+    #     print("ffmpeg: Executable not found on machine.")
+        # raise Exception("Dependency not found: ffmpeg")
     command = [str(program_ffmpeg), "-y", "-i", filename,
                "-ac", str(channels), "-ar", str(rate),
                "-loglevel", "error", temp.name]

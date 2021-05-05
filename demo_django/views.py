@@ -1090,7 +1090,7 @@ def getUserInfo(request):
             "roles": roles,
             "introduce": user.introduce,
             "email": user.email,
-            "avatar": 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+            "avatar": get_gravatar_url(user.account_name),
         }
         return HttpResponse(JsonResponse({
             "code": 20000,
@@ -1890,3 +1890,143 @@ def clickVideo(request):
     resp["code"] = code
     resp["msg"] = ""
     return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getViewHistory(request):
+    user_id = request.GET.get('user_id')
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+    code = 20000
+    co_list = Operations.objects.filter(user_id=user_id).order_by("-operation_time")
+    videos = []
+    for co in co_list:
+        videoList = Videos.objects.filter(id=co.video_id)
+        for video in videoList:
+            # 没有缩略图会自动生成
+            if video.snapshoot_img != None and video.snapshoot_img != "" and os.path.exists(
+                    curPath + '/' + video.snapshoot_img):
+                video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+            else:
+                # 抽帧作为缩略图
+                image_path = os.path.join(curPath, 'statics', 'resource', 'images', video.name.split(".")[0] + ".png")
+                image_path_db = 'statics/' + 'resource/' + 'images/' + video.name.split(".")[0] + ".png"
+                video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', video.name))
+                extract_image(video_path, image_path=image_path)
+                video.snapshoot_img = image_path_db
+                video.save()
+                video.snapshoot_img = getBaseUrl() + video.snapshoot_img
+
+            # create time formate
+            video.rel_path = getBaseUrl() + video.rel_path
+
+            if video.text_location != None:
+                video.text_location = getBaseUrl() + video.text_location
+            if video.subtitle != None:
+                video.subtitle = getBaseUrl() + video.subtitle
+            if video.asr_path != None:
+                video.asr_path = getBaseUrl() + video.asr_path
+            video.create_time = formate_time(video.create_time)
+        temp = {}
+        temp['time'] = formate_time(int(co.operation_time))
+        temp['video_object'] = json.loads(serializers.serialize("json", videoList))
+        videos.append(temp)
+    # videos = serializers.serialize("json", videos)
+
+    if len(videos) == 0:
+        code = 2000
+
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = videos
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def addComment(request):
+    videoId = request.POST.get('videoId')
+    user_id = request.POST.get('user_id')
+    comment = request.POST.get('comment')
+    code = 20000
+    comment_obj = None
+    try:
+        op = Operations.objects.create(operation_type=2, user_id=user_id,
+                                video_id=videoId, comment=comment,
+                                operation_time=int(time.time()))
+        comment_obj = {}
+        comment_obj['id'] = op.id
+        comment_obj['user_id'] = op.user_id
+        comment_obj['video_id'] = op.video_id
+        comment_obj['content'] = op.comment
+        comment_obj['createDate'] = formate_time(op.operation_time)
+    except:
+        code = 2000
+
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = comment_obj
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getCommentList(request):
+    videoId = request.POST.get('videoId')
+    code = 20000
+    commentList = []
+    try:
+        op_list = Operations.objects.filter(operation_type=2, video_id=videoId).order_by('-operation_time')
+        for op in op_list:
+            user = Users.objects.filter(id=op.user_id).first()
+            commentUser = {}
+            commentUser['id'] = user.id
+            commentUser['nickName'] = user.account_name
+            commentUser['avatar'] = get_gravatar_url(user.account_name)
+            comment = {}
+            comment['id'] = op.id
+            comment['content'] = op.comment
+            comment['createDate'] = formate_time(op.operation_time)
+            comment['commentUser'] = commentUser
+            commentList.append(comment)
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = commentList
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getComments(request):
+    user_id = request.GET.get('user_id')
+    code = 20000
+    commentList = []
+    try:
+        op_list = Operations.objects.filter(user_id=user_id, operation_type=2).order_by('-operation_time')
+        for op in op_list:
+            temp = {}
+            video = Videos.objects.filter(id=op.video_id).first()
+            temp['video_title'] = video.title
+            temp['id'] = op.id
+            temp['createDate'] = formate_time(op.operation_time)
+            temp['content'] = op.comment
+            commentList.append(temp)
+    except:
+        code = 2000
+    print(commentList)
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = commentList
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def get_gravatar_url(username, size=80):
+    '''返回头像url'''
+    styles = ['identicon', 'monsterid', 'wavatar', 'retro']
+    '''
+    mm： 简约、卡通风格的人物轮廓像（不会随邮箱哈希值变化而变化）。
+    identicon：几何图案，其形状会随电子邮箱哈希值变化而变化。
+    monsterid：程序生成的“怪兽”头像，颜色和面孔会随会随电子邮箱哈希值变化而变化。
+    wavatar:：用不同面容和背景组合生成的面孔头像。
+    retro：程序生成的8位街机像素头像。
+    '''
+    m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
+    url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=wavatar'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
+    return url

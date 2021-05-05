@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import random
 import re
 import socket
 import time
@@ -10,11 +11,29 @@ import numpy as np
 import pdfkit
 import pymysql
 
-m = hashlib.md5()
-b = "11111111".encode(encoding='utf-8')
-m.update(b)
-str_md5 = m.hexdigest()
-print(str_md5)
+def get_gravatar_url(username, size=80):
+    '''返回头像url'''
+    styles = ['identicon', 'monsterid', 'wavatar', 'retro']
+    '''
+    mm： 简约、卡通风格的人物轮廓像（不会随邮箱哈希值变化而变化）。
+    identicon：几何图案，其形状会随电子邮箱哈希值变化而变化。
+    monsterid：程序生成的“怪兽”头像，颜色和面孔会随会随电子邮箱哈希值变化而变化。
+    wavatar:：用不同面容和背景组合生成的面孔头像。
+    retro：程序生成的8位街机像素头像。
+    '''
+    m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
+    url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=identicon'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
+    return url
+
+print(get_gravatar_url('张志'))
+
+
+
+# m = hashlib.md5()
+# b = "11111111".encode(encoding='utf-8')
+# m.update(b)
+# str_md5 = m.hexdigest()
+# print(str_md5)
 
 # data = ["1", "2", "3", "4", "5"]
 # if "1" in data:
