@@ -2030,3 +2030,7 @@ def get_gravatar_url(username, size=80):
     m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
     url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=wavatar'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
     return url
+
+def doVideoImg():
+    pass
+

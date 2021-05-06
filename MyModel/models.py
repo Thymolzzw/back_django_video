@@ -38,7 +38,6 @@ class Country(models.Model):
 
 
 class Operations(models.Model):
-    id = models.IntegerField(primary_key=True)
     operation_type = models.IntegerField()
     user_id = models.IntegerField()
     video_id = models.IntegerField()
@@ -123,6 +122,8 @@ class Videos(models.Model):
     translate_subtitle = models.CharField(max_length=255, blank=True, null=True)
     text_pdf_location = models.CharField(max_length=255, blank=True, null=True)
     view_volume = models.BigIntegerField()
+    img_modal = models.CharField(max_length=255, blank=True, null=True)
+    voiceprint_modal = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False
