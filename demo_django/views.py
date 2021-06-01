@@ -3,6 +3,7 @@ import mimetypes
 import os
 import random
 import sys
+import tempfile
 import time
 import uuid
 from datetime import datetime
@@ -16,11 +17,15 @@ from django.core import serializers
 import numpy as np
 from django.http import HttpResponse, JsonResponse, response
 from django.shortcuts import render, redirect
+from tensorflow.python.keras.preprocessing import image
+from tensorflow.python.keras.preprocessing.image import load_img
+
 from MyModel.models import Users, Videos, Binner, People, SourceInformation, Country, PeopleRelation, Collection, \
     Operations
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
+from demo_django.CrossModal.ImgModal import ImgModal
 from demo_django.asr.pyTranscriber.asr_api import asr_subtitle
 
 # from demo_django.darknet.ObjectDetection_API import objectDetection
@@ -697,7 +702,8 @@ def getVideoPPT(request):
     curPath = curPath.split(split_reg)[0] + split_reg
 
     ppt_json = None
-    if video.ppt_json_path != None and video.ppt_json_path != "":
+    if video.ppt_json_path != None and video.ppt_json_path != "" and \
+            os.path.exists(os.path.join(curPath, video.ppt_json_path)):
         with open(os.path.join(curPath, video.ppt_json_path), 'r') as load_f:
             load_dict = json.load(load_f)
             # print(load_dict)
@@ -931,7 +937,8 @@ def getText(request):
 
     # 文本识别
     text_data = None
-    if video.text_location != None and video.text_location != "":
+    if video.text_location != None and video.text_location != "" and \
+            os.path.exists(os.path.join(curPath, video.text_location)):
         try:
             with open(os.path.join(curPath, video.text_location), 'r') as load_f:
                 text_data = json.load(load_f)
@@ -1341,7 +1348,6 @@ def getAllResource(request):
 def getProduct(request):
     videoId = request.POST.get("videoId")
     functions = request.POST.get("functions")
-
     video = Videos.objects.filter(id=videoId).first()
     product_result = None
     print("videoId", videoId)
@@ -1577,7 +1583,7 @@ def getPeopleRelation(request):
 
         # 遍历人物
         # from
-        peo_relation_list = PeopleRelation.objects.filter(from_field=peo["people_id"])
+        peo_relation_list = PeopleRelation.objects.filter(from_field=peo["people_id"], is_delete=0)
         for rel in peo_relation_list:
             if rel.to not in appear_people_list:
                 # 没出现过
@@ -1618,7 +1624,7 @@ def getPeopleRelation(request):
                     relation["links"].append(relation_item)
 
         # to
-        peo_relation_list = PeopleRelation.objects.filter(to=peo["people_id"])
+        peo_relation_list = PeopleRelation.objects.filter(to=peo["people_id"], is_delete=0)
         for rel in peo_relation_list:
             if rel.from_field not in appear_people_list:
                 # 没出现过
@@ -1860,6 +1866,7 @@ def getLikes(request):
                 video.asr_path = getBaseUrl() + video.asr_path
             video.create_time = formate_time(video.create_time)
         temp = {}
+        temp['id'] = int(co.id)
         temp['time'] = formate_time(int(co.time))
         temp['video_object'] = json.loads(serializers.serialize("json", videoList))
         videos.append(temp)
@@ -1927,6 +1934,7 @@ def getViewHistory(request):
                 video.asr_path = getBaseUrl() + video.asr_path
             video.create_time = formate_time(video.create_time)
         temp = {}
+        temp['id'] = co.id
         temp['time'] = formate_time(int(co.operation_time))
         temp['video_object'] = json.loads(serializers.serialize("json", videoList))
         videos.append(temp)
@@ -2029,8 +2037,529 @@ def get_gravatar_url(username, size=80):
     '''
     m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
     url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=wavatar'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
+    print(url)
     return url
 
-def doVideoImg():
+def doVideoImgModal(request):
     pass
+    titles = ['wed_1.mp4', 'wed_2.mp4', 'test_1.mp4', 'example3.mp4', 'example2.mp4', 'example1.mp4'
+              ,'any3.mp4', 'any2.mp4', 'any1.mp4', 'wed_1.mp4', 'wed_1.mp4'
+              ,'1-26-2.mp4', '1-26-3.mp4', '1-26.1.mp4', '1-26.2.mp4', '1-26.3.mp4',
+              '1-26.5.mp4', '1-26.6.mp4', '1-26.7.mp4', '1-26.8.mp4', '1-26.9.mp4'
+              ,'1-26.10.mp4', '1-26.11.mp4', '1-26.12.mp4', '1-26.13.mp4', '1-26.14.mp4',
+              '1-26.15.mp4', '1-26.16.mp4']
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = 'demo_django'
+    curPath = curPath.split(split_reg)[0] + split_reg
+    img_modal = ImgModal()
+    for t in titles:
+        video = Videos.objects.filter(title=t).first()
+        if video.img_modal == '' or video.img_modal == None or not \
+            os.path.exists(os.path.join(curPath, video.img_modal)):
+            img_modal_path = 'statics/resource/img_modal/' + str(video.name).split('.')[0] + '.json'
+            img_modal.doImgModal(video_path=os.path.join(curPath, video.rel_path),
+                                 result_path=os.path.join(curPath, img_modal_path),
+                                 frame_inter=5)
+            video.img_modal = img_modal_path
+            video.save()
+            print('ok')
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
 
+
+def uploadImg(request):
+    pass
+    fileDict = request.FILES.items()
+    # print(fileDict)
+    fileDict = request.FILES.items()
+    # 获取上传的文件，如果没有文件，则默认为None
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    curPath = curPath.split("demo_django")[0] + "demo_django"
+    code = 20000
+    videoList = []
+    results = []
+    if not fileDict:
+        code = 2000
+    for (k, v) in fileDict:
+        print("dic[%s]=%s" % (k, v))
+        fileData = request.FILES.getlist(k)
+        for file in fileData:
+            fileName = file._get_name()
+            print('fileName', fileName)
+            if str(fileName).endswith('.wav'):
+                pass
+                temp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+                print('temp', temp.name)
+                writeFile(temp.name, file)
+
+
+                temp.close()
+                # os.unlink(temp.name)
+            else:
+                temp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                print('temp', temp.name)
+                writeFile(temp.name, file)
+                videoList = Videos.objects.filter(is_delete=0, img_modal__isnull=False)
+                videoList = list(videoList)
+                video_i = 0
+                while video_i < len(videoList):
+                    if videoList[video_i].snapshoot_img != None and videoList[video_i].snapshoot_img != "":
+                        videoList[video_i].snapshoot_img = getBaseUrl() + videoList[video_i].snapshoot_img
+                    result_path = os.path.join(curPath, videoList[video_i].img_modal)
+                    if os.path.exists(result_path):
+                        pass
+                        imgModal = ImgModal()
+                        img_path = temp.name
+                        img = load_img(img_path, target_size=(224, 224))
+                        img = image.img_to_array(img) / 255.0
+                        f = imgModal.getFeature(img)
+                        result = imgModal.searchFeature(result_path, f, yuzhi=0.004)
+                        if len(result) <= 0:
+                            videoList.remove(videoList[video_i])
+                            video_i -= 1
+                        else:
+                            results.append(result)
+                            # videoList[video_i]['result'] = result
+                    else:
+                        videoList.remove(videoList[video_i])
+                        video_i -= 1
+                    video_i += 1
+                temp.close()
+                os.unlink(temp.name)
+    if len(videoList) == 0:
+        code = 2000
+    videos = serializers.serialize("json", videoList)
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = {
+        "videos": videos,
+        "results": results
+    }
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def writeFile(filePath, file):
+    with open(filePath, "wb") as f:
+        if file.multiple_chunks():
+            for content in file.chunks():
+                f.write(content)
+        else:
+            data = file.read() ###.decode('utf-8')
+            f.write(data)
+
+
+def deleteComment(request):
+    sub_obj = json.loads(request.POST.get('commentList'))
+    print(sub_obj)
+    code = 20000
+    try:
+        for item in sub_obj:
+            op = Operations.objects.filter(id=item).first()
+            op.delete()
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def deleteCollect(request):
+    sub_obj = json.loads(request.POST.get('collectList'))
+    # print(sub_obj)
+    code = 20000
+    try:
+        for item in sub_obj:
+            co = Collection.objects.filter(id=item).first()
+            co.delete()
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def deleteHistory(request):
+    sub_obj = json.loads(request.POST.get('historyList'))
+    # print(sub_obj)
+    code = 20000
+    try:
+        for item in sub_obj:
+            op = Operations.objects.filter(id=item).first()
+            op.delete()
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getFunctions(request):
+    videoId = request.POST.get("videoId")
+    video = Videos.objects.filter(is_delete=0, id=videoId).first()
+    results = {}
+    results['object_detection'] = False
+    results['text_detection'] = False
+    results['face_detection'] = False
+    results['subtitle'] = False
+    results['ppt'] = False
+    results['voice_print'] = False
+
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    curPath = curPath.split("demo_django")[0] + "demo_django"
+    try:
+        if video.translate_subtitle != None and video.translate_subtitle != '' and \
+            os.path.exists(os.path.join(curPath, video.translate_subtitle)):
+            results['subtitle'] = True
+        if video.voice_json != None and video.voice_json != '' \
+                and os.path.exists(os.path.join(curPath, video.voice_json)):
+            results['voice_print'] = True
+        if video.text_location != None and video.text_location != "" and \
+                os.path.exists(os.path.join(curPath, video.text_location)):
+            results['text_detection'] = True
+        if video.face_npy_path != None and video.face_npy_path != "" \
+                and os.path.exists(os.path.join(curPath, video.face_npy_path)):
+            results['face_detection'] = True
+        if video.ppt_json_path != None and video.ppt_json_path != "" and \
+                os.path.exists(os.path.join(curPath, video.ppt_json_path)):
+            results['ppt'] = True
+        if video.equipment_json_path != None and video.equipment_json_path != "" \
+                and os.path.exists(os.path.join(curPath, video.equipment_json_path)):
+            results['object_detection'] = True
+    except:
+        pass
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    resp["data"] = results
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+
+def getVideosWithFunction(request):
+    # 声纹 1
+    # 语音识别 2
+    # 文本 3
+    # ppt 4
+    # 目标检测 5
+    # face 6
+    function = request.GET.get('function')
+    video_lists = list(Videos.objects.filter(is_delete=0))
+    curPath = os.path.abspath(os.path.dirname(__file__))
+    split_reg = curPath.split(os.sep)[-1]
+    curPath = curPath.split(split_reg)[0] + split_reg
+
+    if function == '1':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].voice_json != None and video_lists[video_i].voice_json != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].voice_json)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[video_i].snapshoot_img != "" and os.path.exists(
+                        os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[0] + ".png"
+                    video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    elif function == '2':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].translate_subtitle != None and video_lists[video_i].translate_subtitle != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].translate_subtitle)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[
+                    video_i].snapshoot_img != "" and os.path.exists(
+                        os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[
+                        0] + ".png"
+                    video_path = os.path.abspath(
+                        os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    elif function == '3':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].text_location != None and video_lists[video_i].text_location != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].text_location)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[
+                    video_i].snapshoot_img != "" and os.path.exists(
+                    os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[
+                        0] + ".png"
+                    video_path = os.path.abspath(
+                        os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    elif function == '4':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].ppt_json_path != None and video_lists[video_i].ppt_json_path != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].ppt_json_path)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[
+                    video_i].snapshoot_img != "" and os.path.exists(
+                    os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[
+                        0] + ".png"
+                    video_path = os.path.abspath(
+                        os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    elif function == '5':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].equipment_json_path != None and video_lists[video_i].equipment_json_path != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].equipment_json_path)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[
+                    video_i].snapshoot_img != "" and os.path.exists(
+                    os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[
+                        0] + ".png"
+                    video_path = os.path.abspath(
+                        os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    elif function == '6':
+        video_i = 0
+        while video_i < len(video_lists):
+            if video_lists[video_i].face_npy_path != None and video_lists[video_i].face_npy_path != "" \
+                    and os.path.exists(os.path.join(curPath, video_lists[video_i].face_npy_path)):
+                # 没有缩略图会自动生成
+                if video_lists[video_i].snapshoot_img != None and video_lists[
+                    video_i].snapshoot_img != "" and os.path.exists(
+                    os.path.join(curPath, video_lists[video_i].snapshoot_img)):
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                else:
+                    # 抽帧作为缩略图
+                    image_path = os.path.join(curPath, 'statics', 'resource', 'images',
+                                              video_lists[video_i].name.split(".")[0] + ".png")
+                    image_path_db = 'statics/' + 'resource/' + 'images/' + video_lists[video_i].name.split(".")[
+                        0] + ".png"
+                    video_path = os.path.abspath(
+                        os.path.join(curPath, 'statics', 'resource', 'videos', video_lists[video_i].name))
+                    extract_image(video_path, image_path=image_path)
+                    video_lists[video_i].snapshoot_img = image_path_db
+                    video_lists[video_i].save()
+                    video_lists[video_i].snapshoot_img = getBaseUrl() + video_lists[video_i].snapshoot_img
+                video_lists[video_i].rel_path = getBaseUrl() + video_lists[video_i].rel_path
+                if video_lists[video_i].text_location != None:
+                    video_lists[video_i].text_location = getBaseUrl() + video_lists[video_i].text_location
+                if video_lists[video_i].subtitle != None:
+                    video_lists[video_i].subtitle = getBaseUrl() + video_lists[video_i].subtitle
+                if video_lists[video_i].asr_path != None:
+                    video_lists[video_i].asr_path = getBaseUrl() + video_lists[video_i].asr_path
+                video_lists[video_i].create_time = formate_time(video_lists[video_i].create_time)
+            else:
+                video_lists.remove(video_lists[video_i])
+                video_i -= 1
+            video_i += 1
+    videos = serializers.serialize("json", video_lists)
+
+    return HttpResponse(JsonResponse({
+        "code": 20000,
+        "msg": "",
+        "status": 1,
+        "data": json.loads(videos)
+    }), content_type="application/json")
+
+def getCommentForAdmin(request):
+    code = 20000
+    commentList = []
+    try:
+        op_list = Operations.objects.filter(operation_type=2).order_by('-operation_time')
+        for op in op_list:
+            user = Users.objects.filter(id=op.user_id).first()
+            commentUser = {}
+            commentUser['id'] = user.id
+            commentUser['nickName'] = user.account_name
+            commentUser['avatar'] = get_gravatar_url(user.account_name)
+            comment = {}
+            comment['id'] = op.id
+            comment['content'] = op.comment
+            comment['createDate'] = formate_time(op.operation_time)
+            comment['commentUser'] = commentUser
+            video = Videos.objects.filter(is_delete=0, id=op.video_id).first()
+            comment['videoTitle'] = video.title
+            commentList.append(comment)
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = commentList
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def delCommentForAdmin(request):
+    code = 20000
+    try:
+        op = Operations.objects.filter(id=request.POST.get('comment_id')).first()
+        op.delete()
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+def getCommentWithVideoIDForAdmin(request):
+    videoId = request.GET.get('videoId')
+    code = 20000
+    commentList = []
+    try:
+        op_list = Operations.objects.filter(operation_type=2, video_id=videoId).order_by('-operation_time')
+        video = Videos.objects.filter(is_delete=0, id=videoId).first()
+        for op in op_list:
+            user = Users.objects.filter(id=op.user_id).first()
+            commentUser = {}
+            commentUser['id'] = user.id
+            commentUser['nickName'] = user.account_name
+            commentUser['avatar'] = get_gravatar_url(user.account_name)
+            comment = {}
+            comment['id'] = op.id
+            comment['content'] = op.comment
+            comment['createDate'] = formate_time(op.operation_time)
+            comment['commentUser'] = commentUser
+            comment['videoTitle'] = video.title
+            commentList.append(comment)
+    except:
+        code = 2000
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = commentList
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
+
+
+def getCommentWithUserIDForAdmin(request):
+    user_id = request.GET.get('user_id')
+    code = 20000
+    commentList = []
+    try:
+        op_list = Operations.objects.filter(user_id=user_id, operation_type=2).order_by('-operation_time')
+        user = Users.objects.filter(id=user_id).first()
+        for op in op_list:
+            commentUser = {}
+            commentUser['id'] = user.id
+            commentUser['nickName'] = user.account_name
+            commentUser['avatar'] = get_gravatar_url(user.account_name)
+            temp = {}
+            video = Videos.objects.filter(id=op.video_id).first()
+            temp['videoTitle'] = video.title
+            temp['id'] = op.id
+            temp['createDate'] = formate_time(op.operation_time)
+            temp['commentUser'] = commentUser
+            temp['content'] = op.comment
+            commentList.append(temp)
+    except:
+        code = 2000
+    print(commentList)
+    resp = {}
+    resp["code"] = code
+    resp["msg"] = ""
+    resp["data"] = commentList
+    return HttpResponse(JsonResponse(resp), content_type="application/json")

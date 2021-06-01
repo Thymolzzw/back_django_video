@@ -31,21 +31,48 @@ from wsgiref.util import FileWrapper
 from django.http import StreamingHttpResponse
 
 # zzw
-from demo_django.views import extract_image, formate_time, parseVTTForUpdate
+from demo_django.views import extract_image, formate_time, parseVTTForUpdate, writeFile
 # from demo_django.voice.test_api import recognition_video
 # from demo_django.voice.test_api import recognition_video
 from demo_django.voice.test_api import recognition_video_api
 from demo_django.wiki.wiki import wiki_api
 
+def getOneFileFromRequest(request):
+    fileDict = request.FILES.items()
+    if not fileDict:
+        return None
+    for (k, v) in fileDict:
+        print("dic[%s]=%s" % (k, v))
+        fileData = request.FILES.getlist(k)
+        for file in fileData:
+            fileName = file._get_name()
+            print('fileName', fileName)
+            return file
+    return None
 
-
+def uploadvideo1(request):
+    getOneFileFromRequest(request)
+    resp = {}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
 
 def uploadvideo(request):
-    file = request.FILES.get("file")
+    file = getOneFileFromRequest(request)
+    if file == None:
+        resp = {}
+        resp["code"] = 2000
+        resp["msg"] = ""
+        resp["status"] = 1
+        return HttpResponse(JsonResponse(resp), content_type="application/json")
     title = request.POST.get("title")
     source = request.POST.get("source")
     functions = request.POST.get("functions")
-    tag = request.POST.get("tag")
+    tag_list = json.loads(request.POST.get("tag"))
+    tag = ''
+    for t in tag_list:
+        tag += ' ' + t
     print("function", functions)
     # print("title" + title)
     print("aa---------------------------------进入！")
@@ -56,13 +83,10 @@ def uploadvideo(request):
     # print(curPath)
 
     # 保存视频文件
-    file_name = str(uuid.uuid1()) + "." + str(file.name).split('.')[-1]
+    file_name = str(uuid.uuid1()) + "." + str(file._get_name()).split('.')[-1]
     video_path = os.path.abspath(os.path.join(curPath, 'statics', 'resource', 'videos', file_name))
     video_path_db = 'statics/' + 'resource/' + 'videos/' + file_name
-    f = open(video_path, 'wb')
-    for i in file.chunks():
-        f.write(i)
-    f.close()
+    writeFile(video_path, file)
     print("保存视频文件")
 
     s = SourceInformation.objects.filter(name = source).first()
@@ -74,7 +98,7 @@ def uploadvideo(request):
 
     video = Videos.objects.create(name=file_name, rel_path=video_path_db, introduce=file_name,
                               create_time=int(time.time()),
-                              tag=tag, title=title,
+                              tag=tag.strip(), title=title,
                               source_id=source_id, is_delete=0, view_volume=0
                               )
 
@@ -175,13 +199,11 @@ def uploadvideo(request):
             pass
     except:
         pass
-
-
-    return JsonResponse({
-        "code": 20000,
-        "msg": "",
-        "status": 200,
-    })
+    resp={}
+    resp["code"] = 20000
+    resp["msg"] = ""
+    resp["status"] = 1
+    return HttpResponse(JsonResponse(resp), content_type="application/json")
 
 def translate_file_en_zh(file_path):
 

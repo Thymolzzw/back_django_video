@@ -11,6 +11,7 @@ secretKey = '1azBAujPnysgE8YBhz5R'
 # 翻译内容 源语言 翻译后的语言
 def translateBaidu(content, fromLang='en', toLang='zh'):
     salt = str(random.randint(32768, 65536))
+    print(salt)
     sign = appid + content + salt + secretKey
     sign = hashlib.md5(sign.encode("utf-8")).hexdigest()
     try:

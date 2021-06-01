@@ -11,21 +11,21 @@ import numpy as np
 import pdfkit
 import pymysql
 
-def get_gravatar_url(username, size=80):
-    '''返回头像url'''
-    styles = ['identicon', 'monsterid', 'wavatar', 'retro']
-    '''
-    mm： 简约、卡通风格的人物轮廓像（不会随邮箱哈希值变化而变化）。
-    identicon：几何图案，其形状会随电子邮箱哈希值变化而变化。
-    monsterid：程序生成的“怪兽”头像，颜色和面孔会随会随电子邮箱哈希值变化而变化。
-    wavatar:：用不同面容和背景组合生成的面孔头像。
-    retro：程序生成的8位街机像素头像。
-    '''
-    m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
-    url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=identicon'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
-    return url
-
-print(get_gravatar_url('张志'))
+# def get_gravatar_url(username, size=80):
+#     '''返回头像url'''
+#     styles = ['identicon', 'monsterid', 'wavatar', 'retro']
+#     '''
+#     mm： 简约、卡通风格的人物轮廓像（不会随邮箱哈希值变化而变化）。
+#     identicon：几何图案，其形状会随电子邮箱哈希值变化而变化。
+#     monsterid：程序生成的“怪兽”头像，颜色和面孔会随会随电子邮箱哈希值变化而变化。
+#     wavatar:：用不同面容和背景组合生成的面孔头像。
+#     retro：程序生成的8位街机像素头像。
+#     '''
+#     m5 = hashlib.md5(f'{username}'.encode('utf-8')).hexdigest()  # 返回16进制摘要字符串
+#     url = f'http://www.gravatar.com/avatar/{m5}?s={size}&d=identicon'  # s 返回头像大小 d 返回头像类型 没在gravatar.com 注册的邮箱需要加此参数
+#     return url
+#
+# print(get_gravatar_url('张志'))
 
 
 
@@ -155,14 +155,14 @@ print(get_gravatar_url('张志'))
 # print(s)
 #
 #
-# import numpy as np
+import numpy as np
 # curPath = os.path.abspath(os.path.dirname(__file__))
 # split_reg = curPath.split(os.sep)[-1]
 # curPath = curPath.split(split_reg)[0] + split_reg
 # print("111" + curPath)
-# loadData = np.load(os.path.join("D:\TensorFlow_workplace_new\demo_django\statics\\resource\\text", 'res_face.npy'), allow_pickle=True)
-# print(loadData)
-# data = []
+loadData = np.load(os.path.join("D:\TensorFlow_workplace_new\zzw\demo_django\statics\\resource\\face_npy\\res_face.npy"), allow_pickle=True)
+print(loadData)
+data = []
 # for item in loadData:
 #     print(item)
 #     item_item = {"name": item[0]}
