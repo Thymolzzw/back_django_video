@@ -32,10 +32,7 @@ var/
 *.txt
 *.json
 *.pdf
-*.srt
-templates/
 statics/
-test/
 
 
 # PyInstaller

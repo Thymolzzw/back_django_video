@@ -295,17 +295,17 @@ def recognition_video_api(feature_list, file_path, time_list):
         item = {}
         start = int(t[0])
         stop = int(t[1])
+        print('start', start, stop)
         if stop - start > 100:
             stop = start + 100
+        print(start, stop)
         ans = recognition_video(feature_list, file_path, start, stop, params, network_eval)
         print("ans", ans)
         if ans != None:
             item['score'] = int(ans['score'].item() * 1000) / 1000
             item['name'] = ans['name']
-            start_timeArray = time.localtime(int(t[0]))
-            start = time.strftime("%H:%M:%S", start_timeArray)
-            stop_timeArray = time.localtime(int(t[1]))
-            stop = time.strftime("%H:%M:%S", stop_timeArray)
+            start = formate_time(int(t[0]))
+            stop = formate_time(int(t[1]))
             item['time'] = str(start) + ' --> ' + str(stop)
             return_ans.append(item)
         i += 1
@@ -313,6 +313,11 @@ def recognition_video_api(feature_list, file_path, time_list):
         return return_ans
     else:
         return None
+
+def formate_time(t):
+    m, s = divmod(t, 60)
+    h, m = divmod(m, 60)
+    return "%02d:%02d:%02d" % (h, m, s)
 
 #将特征文件存为npy结尾的文件
 if __name__ == '__main__':

@@ -21,7 +21,7 @@ def extract_image(path, num):  # 将原始视频抽帧
     cap = cv2.VideoCapture(path)  # 读入文件
     cap.set(cv2.CAP_PROP_POS_FRAMES, num)  # 从num帧开始读视频
     success, frame = cap.read()
-    print("frame", frame)
+    # print("frame", frame)
     try:
         cv2.imwrite(file_name, frame)
     except:
@@ -187,7 +187,7 @@ def main(video_file_path):
     capture = cv2.VideoCapture(video_file_path)
     frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = capture.get(cv2.CAP_PROP_FPS)
-    print("frame_count:", frame_count, " fps:", fps)
+    # print("frame_count:", frame_count, " fps:", fps)
     frame = 0.00
     frames = []
     while int(frame + 0.5) < frame_count:
@@ -211,9 +211,9 @@ def main(video_file_path):
                 frame += fps
                 continue
             frames.append(now_frame_path)
-            print(frame)
+            # print(frame)
         else:
-            print("same frame")
+            # print("same frame")
             os.remove(now_frame_path)
 
         frame += fps
@@ -233,7 +233,7 @@ def main(video_file_path):
     # print(list_json)
 
     json_file_path = os.path.join("statics", "resource", "ppt_json", str(uuid.uuid1())+"_"+str(int(time.time()))+".json")
-    with open(os.path.join(cur_path(), json_file_path), "w") as f:
+    with open(os.path.join(cur_path(), json_file_path), "w", encoding='utf-8') as f:
         json.dump(list_json, f)
 
     pdf_path = None

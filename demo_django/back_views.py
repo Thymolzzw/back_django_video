@@ -17,7 +17,7 @@ from MyModel.models import Users, Videos, Binner, People, SourceInformation, Cou
 import hashlib
 
 # from demo_django.AdelaiDet.TextRecognize_API import text_recognize
-from demo_django.asr.KDXF_ASR.asr_api import asr_subtitle_kdxf
+from demo_django.asr.KDXF_ASR.Subtitle import Subtitle
 from demo_django.asr.pyTranscriber.asr_api import asr_subtitle
 # from demo_django.darknet.ObjectDetection_API import objectDetection
 from demo_django.ppt.ppt_api import ppt_api
@@ -177,16 +177,21 @@ def uploadvideo(request):
         if '4' in functions:
             # asr 语音识别，生成字幕文件
             # asr_subtitle(video_path, os.path.join(curPath, 'statics', 'resource', 'audio_text'))
-            asr_subtitle_kdxf(video_path, os.path.join(curPath, 'statics', 'resource', 'audio_text'))
-            asr_path = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".txt"
-            subtitle = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".srt"
-            video.subtitle = subtitle
-            video.asr_path = asr_path
+            # asr_path = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".txt"
+            subtitle_path = 'statics/' + 'resource/' + 'audio_text/' + file_name.split(".")[0] + ".srt"
+            subtitle = Subtitle()
+            subtitle.generate_subtitles(source_path=curPath + '/' + video.rel_path,
+                                        src_language='en_us',
+                                        out_file_path=curPath + '/' + subtitle_path)
+            video.subtitle = subtitle_path
+            # video.asr_path = asr_path
             video.save()
             print("asr 语音识别，生成字幕文件")
-            if video.translate_subtitle == None or video.translate_subtitle == "":
-                asr_translate_path_db, subtitle_translate_path_db = translate_file_en_zh(curPath + '/' + video.subtitle)
-                video.translate_asr_path = asr_translate_path_db
+            if video.translate_subtitle == None or video.translate_subtitle == "" or not os.path.exists(os.path.join(curPath,
+                                                                            video.translate_subtitle)):
+                asr_translate_path_db, subtitle_translate_path_db = translate_file_en_zh(os.path.join(curPath, video.subtitle))
+                # video.translate_asr_path = asr_translate_path_db
+                subtitle_translate_path_db = srt2vtt(curPath + '/' + subtitle_translate_path_db)
                 video.translate_subtitle = subtitle_translate_path_db
                 video.save()
                 print("translate end")
@@ -196,6 +201,58 @@ def uploadvideo(request):
     try:
         if '5' in functions:
             # voice detection
+            file_name = curPath + '/' + video.translate_subtitle
+            print(file_name)
+            time_pair = []
+            with open(file_name, 'r', encoding='utf-8') as f:
+                line = f.readline()
+                while line:
+                    if '-->' in line:
+                        line = line.strip().split('-->')
+                        line[0] = line[0].strip()
+                        line[1] = line[1].strip()
+                        start_time = line[0][0:-4]
+                        stop_time = line[1][0:-4]
+
+                        start_time = start_time.split(':')
+                        start_time = int(start_time[0]) * 3600 + int(start_time[1]) * 60 + int(start_time[2]) * 1
+
+                        stop_time = stop_time.split(':')
+                        stop_time = int(stop_time[0]) * 3600 + int(stop_time[1]) * 60 + int(stop_time[2]) * 1
+
+                        time_pair.append([start_time, stop_time])
+                        # print(line)
+                    line = f.readline()
+            print("time_pair", time_pair)
+            index = 0
+            while index < len(time_pair) - 1:
+                print(time_pair[index][1], time_pair[index + 1][0])
+                if time_pair[index + 1][0] - time_pair[index][1] < 3:
+                    time_pair[index + 1][0] = time_pair[index][0]
+                    time_pair.remove(time_pair[index])
+                    index -= 1
+                index += 1
+            print("time_pair", time_pair)
+            feature_list = []
+            people_all = People.objects.all()
+            for people in people_all:
+                feature_item = []
+                feature_item.append(people.name)
+                feature_item.append(people.voice_feature_path)
+                feature_list.append(feature_item)
+                print(feature_item)
+            print(feature_list)
+
+            video_path = curPath + '/' + video.rel_path
+            ans = recognition_video_api(feature_list, video_path, time_pair)
+            print("ans", ans)
+            voiceprint_ans = 'statics/resource/voice/audio_json/' + video.name.split('.')[0] + '.json'
+            with open(curPath + '/' + voiceprint_ans, 'w', encoding='utf-8') as load_f:
+                json.dump(ans, load_f)
+            print('voiceprint_ans', voiceprint_ans)
+            video.voice_json = voiceprint_ans
+            video.save()
+            print("voiceprint done")
             pass
     except:
         pass
@@ -210,36 +267,36 @@ def translate_file_en_zh(file_path):
     num_list = []
     time_list = []
     content_list = []
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         line = f.readline()
         while line:
-            print("line", line)
+            # print("line", line)
             num_list.append(line)
             line = f.readline()
             if "-->" in line:
-                print(line)
+                # print(line)
                 time_list.append(line)
                 line = f.readline()
                 content_list.append(line)
                 line = f.readline()
             line = f.readline()
-    print("num_list", num_list)
-    print("time_list", time_list)
-    print("content_list", content_list)
+    # print("num_list", num_list)
+    # print("time_list", time_list)
+    # print("content_list", content_list)
     for i in range(len(content_list)):
         time.sleep(1.0)
         translate_content = ""
         try:
             translate_content = translate_api(content_list[i])
-            print("translate_content", translate_content)
+            # print("translate_content", translate_content)
         except:
             translate_content = ""
         if translate_content == None:
             translate_content = ''
         content_list[i] += translate_content + '\n'
-    print("num_list", num_list)
-    print("time_list", time_list)
-    print("content_list", content_list)
+    # print("num_list", num_list)
+    # print("time_list", time_list)
+    # print("content_list", content_list)
 
     file_name = file_path.split('/')[-1].split('.')[0]
     curPath = os.path.abspath(os.path.dirname(__file__))
@@ -248,20 +305,21 @@ def translate_file_en_zh(file_path):
     # print(curPath)
 
     asr_translate_path_db = 'statics/resource/audio_text/' + file_name + '_translate.txt'
-    asr_translate_path = curPath + '/' + asr_translate_path_db
+    asr_translate_path = os.path.join(curPath, asr_translate_path_db)
 
     subtitle_translate_path_db = 'statics/resource/audio_text/' + file_name + '_translate.srt'
-    subtitle_translate_path = curPath + '/' + subtitle_translate_path_db
+    subtitle_translate_path = os.path.join(curPath, subtitle_translate_path_db)
 
-    with open(asr_translate_path, 'w') as f:
+    with open(asr_translate_path, 'w', encoding='utf-8') as f:
         for content in content_list:
             f.write(content)
-    with open(subtitle_translate_path, 'w') as f:
+    with open(subtitle_translate_path, 'w', encoding='utf-8') as f:
         for i in range(len(content_list)):
             f.write(num_list[i])
             f.write(time_list[i])
             f.write(content_list[i])
             f.write('\n')
+    # print(subtitle_translate_path)
     return asr_translate_path_db, subtitle_translate_path_db
 
 

@@ -11,6 +11,13 @@ import numpy as np
 import pdfkit
 import pymysql
 
+
+start_timeArray = time.localtime(153)
+start = time.strftime("%H:%M:%S", start_timeArray)
+print(start)
+
+
+
 # def get_gravatar_url(username, size=80):
 #     '''返回头像url'''
 #     styles = ['identicon', 'monsterid', 'wavatar', 'retro']
